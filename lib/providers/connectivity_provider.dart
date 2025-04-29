@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
-class ConnectivityService with ChangeNotifier {
+class ConnectivityProvider with ChangeNotifier {
   bool _isOnline = false;
   bool _wasOffline = false;
   DateTime _lastRefreshTime = DateTime.now();
@@ -22,7 +22,7 @@ class ConnectivityService with ChangeNotifier {
   // Getter for favorite server status
   bool get isServerUnavailable => _isServerUnavailable;
 
-  ConnectivityService() {
+  ConnectivityProvider() {
     _initConnectivity();
   }
 

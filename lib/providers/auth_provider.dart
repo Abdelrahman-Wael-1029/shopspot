@@ -2,10 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:provider/provider.dart';
+import 'package:shopspot/providers/connectivity_provider.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
 import '../services/database_service.dart';
-import '../services/connectivity_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   User? _user;
@@ -61,7 +61,6 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> register({
     required BuildContext context,
     required String name,
-    required String studentId,
     required String email,
     required String password,
     required String passwordConfirmation,
@@ -84,7 +83,6 @@ class AuthProvider extends ChangeNotifier {
 
       final result = await ApiService.register(
         name: name,
-        studentId: studentId,
         email: email,
         password: password,
         passwordConfirmation: passwordConfirmation,
@@ -139,8 +137,8 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final connectivityService =
-        Provider.of<ConnectivityService>(context, listen: false);
+    final connectivityProvider =
+        Provider.of<ConnectivityProvider>(context, listen: false);
 
     // Check if local user data exists
     final localUser = DatabaseService.getCurrentUser();
@@ -154,7 +152,7 @@ class AuthProvider extends ChangeNotifier {
       // If server is available, determine if we should use server data
       if (serverIsAvailable) {
         // Reset server status since it's available
-        connectivityService.resetServerStatus();
+        connectivityProvider.resetServerStatus();
         result = await ApiService.getProfile();
 
         if (result['success']) {
@@ -162,7 +160,7 @@ class AuthProvider extends ChangeNotifier {
           _error = null;
 
           // Mark as refreshed
-          connectivityService.markRefreshed();
+          connectivityProvider.markRefreshed();
 
           _isLoading = false;
           notifyListeners();

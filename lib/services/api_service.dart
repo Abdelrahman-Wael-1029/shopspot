@@ -12,7 +12,7 @@ import '../services/database_service.dart';
 
 class ApiService {
   // Base URL for the API
-  static const String baseUrl = 'http://192.168.1.9:8000/api';
+  static const String baseUrl = 'http://192.168.1.8:8000/api';
   // For physical devices using the same network, you might need to use your computer's IP address
   // Example: static const String baseUrl = 'http://192.168.1.4:8000/api';
   // Use 10.0.2.2 for Android emulator to connect to localhost
@@ -158,7 +158,6 @@ class ApiService {
         // Create a complete user object with token
         final userWithToken = user.copyWith(token: token);
 
-        // Store user in Hive database
         await DatabaseService.saveCurrentUser(userWithToken);
 
         return {
@@ -194,7 +193,6 @@ class ApiService {
   // Register user
   static Future<Map<String, dynamic>> register({
     required String name,
-    required String studentId,
     required String email,
     required String password,
     required String passwordConfirmation,
@@ -204,11 +202,9 @@ class ApiService {
     // Generate a unique ID for this request
     final requestId = 'register-${DateTime.now().millisecondsSinceEpoch}';
     final client = _getClient(requestId);
-    print('start register');
     try {
       final Map<String, dynamic> body = {
         'name': name,
-        'student_id': studentId,
         'email': email,
         'password': password,
         'password_confirmation': passwordConfirmation,
@@ -536,261 +532,8 @@ class ApiService {
     return imageFile;
   }
 
-  // Stores API methods
-  static Future<Map<String, dynamic>> getStores() async {
-    // Generate a unique ID for this request
-    final requestId = 'stores-${DateTime.now().millisecondsSinceEpoch}';
-    final client = _getClient(requestId);
-
-    try {
-      final response = await client
-          .get(
-            Uri.parse('$baseUrl/stores'),
-            headers: await _getHeaders(authorized: true),
-          )
-          .timeout(const Duration(seconds: 2));
-
-      final responseData = jsonDecode(response.body);
-
-      // Cleanup the client
-      client.close();
-      _removeClient(requestId);
-
-      if (response.statusCode == 200) {
-        return {
-          'success': true,
-          'stores': responseData['data'],
-        };
-      } else {
-        return {
-          'success': false,
-          'message': responseData['message'],
-        };
-      }
-    } on TimeoutException {
-      timeoutHandling();
-
-      return {
-        'success': false,
-        'message': 'Connection timed out. Please try again later.',
-      };
-    } catch (e) {
-      // Cleanup the client
-      client.close();
-      _removeClient(requestId);
-
-      return {
-        'success': false,
-        'message': 'Network connection issue. Please try again later.',
-      };
-    }
-  }
-
-  static Future<Map<String, dynamic>> getStoreDetails(int storeId) async {
-    // Generate a unique ID for this request
-    final requestId =
-        'store-details-$storeId-${DateTime.now().millisecondsSinceEpoch}';
-    final client = _getClient(requestId);
-
-    try {
-      final response = await client
-          .get(
-            Uri.parse('$baseUrl/stores/$storeId'),
-            headers: await _getHeaders(authorized: true),
-          )
-          .timeout(const Duration(seconds: 2));
-
-      final responseData = jsonDecode(response.body);
-
-      // Cleanup the client
-      client.close();
-      _removeClient(requestId);
-
-      if (response.statusCode == 200) {
-        return {
-          'success': true,
-          'store': responseData['data'],
-        };
-      } else {
-        return {
-          'success': false,
-          'message': responseData['message'],
-        };
-      }
-    } on TimeoutException {
-      timeoutHandling();
-
-      return {
-        'success': false,
-        'message': 'Connection timed out. Please try again later.',
-      };
-    } catch (e) {
-      // Cleanup the client
-      client.close();
-      _removeClient(requestId);
-
-      return {
-        'success': false,
-        'message': 'Network connection issue. Please try again later.',
-      };
-    }
-  }
-
-  // Favorites API methods
-  static Future<Map<String, dynamic>> getFavorites() async {
-    // Generate a unique ID for this request
-    final requestId = 'favorites-${DateTime.now().millisecondsSinceEpoch}';
-    final client = _getClient(requestId);
-
-    try {
-      final response = await client
-          .get(
-            Uri.parse('$baseUrl/favorites'),
-            headers: await _getHeaders(authorized: true),
-          )
-          .timeout(const Duration(seconds: 2));
-
-      final responseData = jsonDecode(response.body);
-
-      // Cleanup the client
-      client.close();
-      _removeClient(requestId);
-
-      if (response.statusCode == 200) {
-        return {
-          'success': true,
-          'favorites': responseData['data'],
-        };
-      } else {
-        return {
-          'success': false,
-          'message': responseData['message'],
-        };
-      }
-    } on TimeoutException {
-      timeoutHandling();
-
-      return {
-        'success': false,
-        'message': 'Connection timed out. Please try again later.',
-      };
-    } catch (e) {
-      // Cleanup the client
-      client.close();
-      _removeClient(requestId);
-
-      return {
-        'success': false,
-        'message': 'Network connection issue. Please try again later.',
-      };
-    }
-  }
-
-  static Future<Map<String, dynamic>> addToFavorites(int storeId) async {
-    // Generate a unique ID for this request
-    final requestId =
-        'add-favorite-$storeId-${DateTime.now().millisecondsSinceEpoch}';
-    final client = _getClient(requestId);
-
-    try {
-      final response = await client
-          .post(
-            Uri.parse('$baseUrl/favorites'),
-            headers: await _getHeaders(authorized: true),
-            body: jsonEncode({
-              'store_id': storeId,
-            }),
-          )
-          .timeout(const Duration(seconds: 2));
-
-      final responseData = jsonDecode(response.body);
-
-      // Cleanup the client
-      client.close();
-      _removeClient(requestId);
-
-      if (response.statusCode == 201) {
-        return {
-          'success': true,
-          'message': responseData['message'],
-        };
-      } else {
-        return {
-          'success': false,
-          'message': responseData['message'],
-        };
-      }
-    } on TimeoutException {
-      timeoutHandling();
-
-      return {
-        'success': false,
-        'message': 'Connection timed out. Please try again later.',
-      };
-    } catch (e) {
-      // Cleanup the client
-      client.close();
-      _removeClient(requestId);
-
-      return {
-        'success': false,
-        'message': 'Network connection issue. Please try again later.',
-      };
-    }
-  }
-
-  static Future<Map<String, dynamic>> removeFromFavorites(int storeId) async {
-    // Generate a unique ID for this request
-    final requestId =
-        'remove-favorite-$storeId-${DateTime.now().millisecondsSinceEpoch}';
-    final client = _getClient(requestId);
-
-    try {
-      final response = await client
-          .delete(
-            Uri.parse('$baseUrl/favorites/$storeId'),
-            headers: await _getHeaders(authorized: true),
-          )
-          .timeout(const Duration(seconds: 2));
-
-      final responseData = jsonDecode(response.body);
-
-      // Cleanup the client
-      client.close();
-      _removeClient(requestId);
-
-      if (response.statusCode == 200) {
-        return {
-          'success': true,
-          'message': responseData['message'],
-        };
-      } else {
-        return {
-          'success': false,
-          'message': responseData['message'],
-        };
-      }
-    } on TimeoutException {
-      timeoutHandling();
-
-      return {
-        'success': false,
-        'message': 'Connection timed out. Please try again later.',
-      };
-    } catch (e) {
-      // Cleanup the client
-      client.close();
-      _removeClient(requestId);
-
-      return {
-        'success': false,
-        'message': 'Network connection issue. Please try again later.',
-      };
-    }
-  }
-
   // Restaurant API methods
-  
+
   // Get all restaurants
   static Future<Map<String, dynamic>> getRestaurants() async {
     final requestId = 'restaurants-${DateTime.now().millisecondsSinceEpoch}';
@@ -811,10 +554,8 @@ class ApiService {
       _removeClient(requestId);
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = responseData['data'];
-        final List<Restaurant> restaurants = data
-            .map((item) => Restaurant.fromJson(item))
-            .toList();
+        final List<Restaurant> restaurants =
+            List<Restaurant>.from(responseData.map((item) => Restaurant.fromJson(item)).toList());
 
         return {
           'success': true,
@@ -837,6 +578,7 @@ class ApiService {
       // Cleanup the client
       client.close();
       _removeClient(requestId);
+      print(e);
 
       return {
         'success': false,
@@ -846,8 +588,10 @@ class ApiService {
   }
 
   // Get products for a specific restaurant
-  static Future<Map<String, dynamic>> getRestaurantProducts(int restaurantId) async {
-    final requestId = 'restaurant-products-$restaurantId-${DateTime.now().millisecondsSinceEpoch}';
+  static Future<Map<String, dynamic>> getRestaurantProducts(
+      int restaurantId) async {
+    final requestId =
+        'restaurant-products-$restaurantId-${DateTime.now().millisecondsSinceEpoch}';
     final client = _getClient(requestId);
 
     try {
@@ -866,9 +610,8 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = responseData['data'];
-        final List<Product> products = data
-            .map((item) => Product.fromJson(item))
-            .toList();
+        final List<Product> products =
+            data.map((item) => Product.fromJson(item)).toList();
 
         return {
           'success': true,
@@ -900,7 +643,7 @@ class ApiService {
   }
 
   // Product API methods
-  
+
   // Get all products
   static Future<Map<String, dynamic>> getProducts() async {
     final requestId = 'products-${DateTime.now().millisecondsSinceEpoch}';
@@ -922,9 +665,8 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = responseData['data'];
-        final List<Product> products = data
-            .map((item) => Product.fromJson(item))
-            .toList();
+        final List<Product> products =
+            data.map((item) => Product.fromJson(item)).toList();
 
         return {
           'success': true,
@@ -957,7 +699,8 @@ class ApiService {
 
   // Search products by name
   static Future<Map<String, dynamic>> searchProducts(String query) async {
-    final requestId = 'search-products-${DateTime.now().millisecondsSinceEpoch}';
+    final requestId =
+        'search-products-${DateTime.now().millisecondsSinceEpoch}';
     final client = _getClient(requestId);
 
     try {
@@ -976,9 +719,8 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = responseData['data'];
-        final List<Product> products = data
-            .map((item) => Product.fromJson(item))
-            .toList();
+        final List<Product> products =
+            data.map((item) => Product.fromJson(item)).toList();
 
         return {
           'success': true,
@@ -1010,8 +752,10 @@ class ApiService {
   }
 
   // Get restaurants that sell a specific product
-  static Future<Map<String, dynamic>> getProductRestaurants(int productId) async {
-    final requestId = 'product-restaurants-$productId-${DateTime.now().millisecondsSinceEpoch}';
+  static Future<Map<String, dynamic>> getProductRestaurants(
+      int productId) async {
+    final requestId =
+        'product-restaurants-$productId-${DateTime.now().millisecondsSinceEpoch}';
     final client = _getClient(requestId);
 
     try {
@@ -1030,9 +774,8 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = responseData['data'];
-        final List<Restaurant> restaurants = data
-            .map((item) => Restaurant.fromJson(item))
-            .toList();
+        final List<Restaurant> restaurants =
+            data.map((item) => Restaurant.fromJson(item)).toList();
 
         return {
           'success': true,
@@ -1066,7 +809,8 @@ class ApiService {
   // Get product details for a specific restaurant
   static Future<Map<String, dynamic>> getProductDetailsForRestaurant(
       int restaurantId, int productId) async {
-    final requestId = 'product-details-$restaurantId-$productId-${DateTime.now().millisecondsSinceEpoch}';
+    final requestId =
+        'product-details-$restaurantId-$productId-${DateTime.now().millisecondsSinceEpoch}';
     final client = _getClient(requestId);
 
     try {

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:provider/provider.dart';
-import '../services/auth_provider.dart';
-import '../utils/validator.dart';
-import '../widgets/custom_button.dart';
-import '../widgets/custom_text_field.dart';
+import 'package:shopspot/utils/app_routes.dart';
+import '../../providers/auth_provider.dart';
+import '../../utils/validator.dart';
+import '../../widgets/custom_button.dart';
+import '../../widgets/custom_text_field.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -16,7 +17,6 @@ class SignupScreen extends StatefulWidget {
 class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _studentIdController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
@@ -30,7 +30,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
   String? _nameError;
   String? _emailError;
-  String? _studentIdError;
   String? _passwordError;
   String? _confirmPasswordError;
 
@@ -38,7 +37,6 @@ class _SignupScreenState extends State<SignupScreen> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _studentIdController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -50,25 +48,12 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() {
       _nameError = null;
       _emailError = null;
-      _studentIdError = null;
       _passwordError = null;
       _confirmPasswordError = null;
 
       // Validate name (mandatory)
       if (!Validator.isValidName(_nameController.text)) {
         _nameError = 'Name is required';
-        isValid = false;
-      }
-
-      // Validate student ID (YYYYNNNN format)
-      final studentIdValidationMsg =
-          Validator.getStudentIdValidationMessage(_studentIdController.text);
-      if (studentIdValidationMsg != null) {
-        _studentIdError = studentIdValidationMsg;
-        isValid = false;
-      } else if (!Validator.studentIdMatchesEmail(
-          _studentIdController.text, _emailController.text)) {
-        _studentIdError = 'Student ID must match the one in your email';
         isValid = false;
       }
 
@@ -113,7 +98,6 @@ class _SignupScreenState extends State<SignupScreen> {
     final success = await authProvider.register(
       context: context,
       name: _nameController.text,
-      studentId: _studentIdController.text,
       email: _emailController.text,
       password: _passwordController.text,
       passwordConfirmation: _confirmPasswordController.text,
@@ -131,7 +115,7 @@ class _SignupScreenState extends State<SignupScreen> {
       );
 
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/stores');
+        Navigator.pushReplacementNamed(context, AppRoutes.home);
       }
     } else {
       if (mounted) {
@@ -144,7 +128,6 @@ class _SignupScreenState extends State<SignupScreen> {
         setState(() {
           _nameError = null;
           _emailError = null;
-          _studentIdError = null;
           _passwordError = null;
           _confirmPasswordError = null;
         });
@@ -155,14 +138,6 @@ class _SignupScreenState extends State<SignupScreen> {
             // Map server validation errors to specific form fields
             if (validationErrors.containsKey('name')) {
               _nameError = validationErrors['name'][0];
-            }
-
-            if (validationErrors.containsKey('student_id')) {
-              _studentIdError = validationErrors['student_id'][0];
-              // Make error message more user-friendly
-              if (_studentIdError!.contains("has already been taken")) {
-                _studentIdError = "This student ID is already registered";
-              }
             }
 
             if (validationErrors.containsKey('email')) {
@@ -259,46 +234,6 @@ class _SignupScreenState extends State<SignupScreen> {
               // Gender radio buttons
               _buildGenderSelection(),
 
-              // Student ID field with sync button for email generation
-              CustomTextField(
-                controller: _studentIdController,
-                labelText: 'Student ID *',
-                hintText: 'YYYY + [1-1999] (e.g., 20011002)',
-                helperText:
-                    'First 4: year (1996-2025), Last 4: number between 1-1999',
-                errorText: _studentIdError,
-                keyboardType: TextInputType.number,
-                maxLength: 8,
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    Icons.sync,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  tooltip: 'Generate Email from ID',
-                  onPressed: () {
-                    // Check if student ID is valid before generating email
-                    if (Validator.isValidStudentId(_studentIdController.text)) {
-                      setState(() {
-                        _emailController.text =
-                            '${_studentIdController.text}@stud.fci-cu.edu.eg';
-                        _emailError = null; // Clear any previous email errors
-                      });
-                      Fluttertoast.showToast(
-                        msg: "Email generated successfully",
-                        backgroundColor: Colors.green,
-                      );
-                    } else {
-                      final errorMsg = Validator.getStudentIdValidationMessage(
-                          _studentIdController.text);
-                      Fluttertoast.showToast(
-                        msg: errorMsg ?? "Invalid Student ID format",
-                        backgroundColor: Colors.red,
-                      );
-                    }
-                  },
-                ),
-              ),
-
               CustomTextField(
                 controller: _emailController,
                 labelText: 'Email (FCI Email) *',
@@ -306,10 +241,6 @@ class _SignupScreenState extends State<SignupScreen> {
                 keyboardType: TextInputType.emailAddress,
                 onChanged: (value) {
                   // Auto-extract student ID from email
-                  final studentId = Validator.extractStudentIdFromEmail(value);
-                  if (studentId != null && _studentIdController.text.isEmpty) {
-                    _studentIdController.text = studentId;
-                  }
                 },
               ),
 

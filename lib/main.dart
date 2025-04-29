@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:shopspot/screens/login_screen.dart';
-import 'package:shopspot/screens/profile_screen.dart';
-import 'package:shopspot/screens/signup_screen.dart';
+import 'package:shopspot/providers/product_provider.dart';
+import 'package:shopspot/providers/restaurant_provider.dart';
 import 'package:shopspot/services/location_service.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-import 'services/auth_provider.dart';
-import 'services/location_provider.dart';
+import 'providers/auth_provider.dart';
+import 'providers/location_provider.dart';
+import 'providers/index_provider.dart';
 import 'services/database_service.dart';
-import 'services/connectivity_service.dart';
+import 'providers/connectivity_provider.dart';
+import 'utils/app_routes.dart';
+import 'screens/home_screen.dart';
 
 void main() async {
   // Ensure Flutter is initialized - this is important!
@@ -23,9 +25,12 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (context) => ConnectivityService()),
+        ChangeNotifierProvider(create: (context) => ConnectivityProvider()),
         ChangeNotifierProvider(create: (context) => AuthProvider()),
         ChangeNotifierProvider(create: (context) => LocationProvider()),
+        ChangeNotifierProvider(create: (context) => ProductProvider()),
+        ChangeNotifierProvider(create: (context) => RestaurantProvider()),
+        ChangeNotifierProvider(create: (context) => IndexProvider()),
       ],
       child: const MyApp(),
     ),
@@ -38,29 +43,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'FCI Student Portal',
+      title: 'Restaurant App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      // Use InitScreen as the home screen that will handle auth check
+      onGenerateRoute: AppRoutes.generateRoute,
       home: const InitScreen(),
-      onGenerateRoute: (settings) {
-        switch (settings.name) {
-          case '/login':
-            return MaterialPageRoute(builder: (_) => const LoginScreen());
-          case '/register':
-            return MaterialPageRoute(builder: (_) => const SignupScreen());
-          case '/profile':
-            return MaterialPageRoute(
-                builder: (_) =>
-                    const AppLifecycleManager(child: ProfileScreen()));
-          default:
-            return MaterialPageRoute(
-                builder: (_) => const AppLifecycleManager(child: InitScreen()));
-        }
-      },
     );
   }
 }
@@ -102,7 +92,9 @@ class _InitScreenState extends State<InitScreen> {
     // Navigate to the appropriate screen
     if (mounted) {
       Navigator.pushReplacementNamed(
-          context, isAuthenticated ? '/stores' : '/login');
+        context,
+        isAuthenticated ? AppRoutes.home : AppRoutes.login,
+      );
     }
   }
 
@@ -149,8 +141,7 @@ class AppLifecycleManager extends StatefulWidget {
 
 class _AppLifecycleManagerState extends State<AppLifecycleManager>
     with WidgetsBindingObserver {
-  // Store providers as class members to avoid BuildContext access in async methods
-  late ConnectivityService _connectivityService;
+  late ConnectivityProvider _ConnectivityProvider;
   late AuthProvider _authProvider;
   bool _providersInitialized = false;
 
@@ -171,8 +162,8 @@ class _AppLifecycleManagerState extends State<AppLifecycleManager>
     super.didChangeDependencies();
     // Initialize providers once when dependencies are available
     if (!_providersInitialized) {
-      _connectivityService =
-          Provider.of<ConnectivityService>(context, listen: false);
+      _ConnectivityProvider =
+          Provider.of<ConnectivityProvider>(context, listen: false);
       _authProvider = Provider.of<AuthProvider>(context, listen: false);
       _providersInitialized = true;
     }
@@ -184,10 +175,10 @@ class _AppLifecycleManagerState extends State<AppLifecycleManager>
 
     // When app resumes, refresh data if needed
     if (state == AppLifecycleState.resumed) {
-      _connectivityService.checkConnectivity();
-      if (_connectivityService.shouldRefresh && _authProvider.isAuthenticated) {
+      _ConnectivityProvider.checkConnectivity();
+      if (_ConnectivityProvider.shouldRefresh && _authProvider.isAuthenticated) {
         // Refresh data from server - but not profile data (will be refreshed on demand)
-        _connectivityService.markRefreshed();
+        _ConnectivityProvider.markRefreshed();
       }
     }
   }

@@ -4,7 +4,6 @@ import '../services/location_service.dart';
 
 class LocationProvider extends ChangeNotifier {
   Position? _currentLocation;
-  final Map<int, double?> _storeDistances = {};
 
   // Refresh current location
   Future<void> refreshLocation() async {

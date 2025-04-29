@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import '../models/user_model.dart';
-import '../services/auth_provider.dart';
-import '../services/connectivity_service.dart';
-import '../utils/validator.dart';
-import '../widgets/custom_button.dart';
-import '../widgets/custom_text_field.dart';
+import '../../models/user_model.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/connectivity_provider.dart';
+import '../../utils/validator.dart';
+import '../../widgets/custom_button.dart';
+import '../../widgets/custom_text_field.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -55,12 +55,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadUserProfile() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final connectivityService =
-        Provider.of<ConnectivityService>(context, listen: false);
+    final connectivityProvider =
+        Provider.of<ConnectivityProvider>(context, listen: false);
 
     // Check if we need to get fresh data from server
     final shouldLoadFromServer =
-        connectivityService.isOnline && connectivityService.shouldRefresh;
+        connectivityProvider.isOnline && connectivityProvider.shouldRefresh;
 
     // Display current cached data immediately if available
     _updateUIWithUserData(authProvider.user);
@@ -73,8 +73,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _updateUIWithUserData(authProvider.user);
 
       // Mark as refreshed
-      connectivityService.markRefreshed();
-    } else if (!connectivityService.isOnline) {
+      connectivityProvider.markRefreshed();
+    } else if (!connectivityProvider.isOnline) {
       // Show toast if we're offline
       Fluttertoast.showToast(
         msg: "You are offline. Showing cached profile data.",
@@ -308,13 +308,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               });
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.store),
-            tooltip: 'Stores',
-            onPressed: () {
-              Navigator.pop(context);
-            },
-          ),
+
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'logout') {

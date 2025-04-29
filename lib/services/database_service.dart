@@ -6,7 +6,6 @@ import '../models/user_model.dart';
 
 class DatabaseService {
   static const String _userBoxName = 'userBox';
-  static const String _storesBoxName = 'storesBox';
   static const String _currentUserKey = 'currentUser';
   static const String _profileImageFolderName = 'profile_images';
   static Box<User>? _userBox;
@@ -69,7 +68,6 @@ class DatabaseService {
       // Check if URL has changed
       final currentUser = getCurrentUser();
 
-      // If the URL is the same as what we already have stored locally, reuse the existing image
       if (currentUser?.profilePhotoUrl == imageUrl &&
           currentUser?.profilePhoto != null &&
           File(currentUser!.profilePhoto!).existsSync()) {

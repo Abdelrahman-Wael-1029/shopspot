@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:provider/provider.dart';
-import '../services/auth_provider.dart';
-import '../widgets/custom_button.dart';
-import '../widgets/custom_text_field.dart';
+import 'package:shopspot/utils/app_routes.dart';
+import '../../providers/auth_provider.dart';
+import '../../widgets/custom_button.dart';
+import '../../widgets/custom_text_field.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -74,9 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
         textColor: Colors.white,
       );
 
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/stores');
-      }
+      Navigator.pushReplacementNamed(context, AppRoutes.home);
     } else {
       if (mounted) {
         Fluttertoast.showToast(

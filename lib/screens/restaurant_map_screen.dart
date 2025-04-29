@@ -7,10 +7,10 @@ class RestaurantMapScreen extends StatefulWidget {
   final String productName;
 
   const RestaurantMapScreen({
-    Key? key,
+    super.key,
     required this.restaurants,
     required this.productName,
-  }) : super(key: key);
+  });
 
   @override
   _RestaurantMapScreenState createState() => _RestaurantMapScreenState();
