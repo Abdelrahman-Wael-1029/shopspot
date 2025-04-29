@@ -1,0 +1,251 @@
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:provider/provider.dart';
+import '../models/user_model.dart';
+import '../services/api_service.dart';
+import '../services/database_service.dart';
+import '../services/connectivity_service.dart';
+
+class AuthProvider extends ChangeNotifier {
+  User? _user;
+  bool _isLoading = false;
+  String? _error;
+  Map<String, dynamic>? _validationErrors;
+
+  User? get user => _user;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+  Map<String, dynamic>? get validationErrors => _validationErrors;
+  bool get isAuthenticated => _user != null;
+
+  // Login user
+  Future<bool> login(
+      BuildContext context, String email, String password) async {
+    _isLoading = true;
+    _error = null;
+    _validationErrors = null;
+    bool success = false;
+
+    try {
+      // Check internet connection before attempting login
+      final hasInternet = await ApiService.isApiAccessible();
+      if (!hasInternet) {
+        _error = 'Unable to connect to the server. Please try again later.';
+        return false;
+      }
+
+      final result = await ApiService.login(email, password);
+
+      if (result['success']) {
+        _user = DatabaseService.getCurrentUser();
+        success = true;
+        if (context.mounted) {
+         
+        }
+      } else {
+        _error = result['message'];
+        _validationErrors = result['errors'] as Map<String, dynamic>?;
+      }
+    } catch (e) {
+      _error = 'Unable to connect to the server. Please try again later.';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+
+    return success;
+  }
+
+  // Register user
+  Future<bool> register({
+    required BuildContext context,
+    required String name,
+    required String studentId,
+    required String email,
+    required String password,
+    required String passwordConfirmation,
+    String? gender,
+    String? level,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    _validationErrors = null;
+    bool success = false;
+
+    try {
+      // Check internet connection before attempting registration
+      final hasInternet = await ApiService.isApiAccessible();
+      if (!hasInternet) {
+        _error = 'Unable to connect to the server. Please try again later.';
+        print('unable to register');
+        return false;
+      }
+
+      final result = await ApiService.register(
+        name: name,
+        studentId: studentId,
+        email: email,
+        password: password,
+        passwordConfirmation: passwordConfirmation,
+        gender: gender,
+        level: level,
+      );
+
+      if (result['success']) {
+        _user = DatabaseService.getCurrentUser();
+        success = true;
+        if (context.mounted) {
+        
+        }
+      } else {
+        _error = result['message'];
+        _validationErrors = result['errors'] as Map<String, dynamic>?;
+      }
+    } catch (e) {
+      _error = 'Unable to connect to the server. Please try again later.';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+
+    return success;
+  }
+
+  // Logout user
+  Future<void> logout(BuildContext context) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {      // Try to logout from server if we have internet
+      final hasInternet = await ApiService.isApiAccessible();
+      if (hasInternet) {
+        await ApiService.logout();
+      }
+    } catch (e) {
+      // Continue with local logout even if server logout fails
+    } finally {
+      // Always clear local data regardless of server response
+      await DatabaseService.deleteCurrentUser();
+
+      _user = null;
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // Get user profile data
+  Future<void> getProfile(BuildContext context) async {
+    _isLoading = true;
+    notifyListeners();
+
+    final connectivityService =
+        Provider.of<ConnectivityService>(context, listen: false);
+
+    // Check if local user data exists
+    final localUser = DatabaseService.getCurrentUser();
+    final hasLocalData = localUser != null;
+
+    // Check server availability first with a short timeout
+    final serverIsAvailable = await ApiService.isApiAccessible();
+    Map<String, dynamic> result = {};
+
+    try {
+      // If server is available, determine if we should use server data
+      if (serverIsAvailable) {
+        // Reset server status since it's available
+        connectivityService.resetServerStatus();
+        result = await ApiService.getProfile();
+
+        if (result['success']) {
+          _user = result['user'];
+          _error = null;
+
+          // Mark as refreshed
+          connectivityService.markRefreshed();
+
+          _isLoading = false;
+          notifyListeners();
+          return;
+        }
+      }
+    } catch (e) {
+      // Do nothing
+    } finally {
+      if (!serverIsAvailable || (serverIsAvailable && !result['success'])) {
+        if (hasLocalData) {
+          _user = localUser;
+          _error = null; // Don't show error if we have cached data
+
+          // Show toast if connectivity service is available
+          if (context.mounted) {
+            Fluttertoast.showToast(
+              msg: 'Unable to connect to the server. Using cached data.',
+              backgroundColor: Colors.orange,
+            );
+          }
+        } else {
+          _error =
+              'Network connection required. Please check your connection and try again.';
+        }
+      }
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // Update user profile
+  Future<bool> updateProfile({
+    String? name,
+    String? gender,
+    String? level,
+    String? password,
+    String? passwordConfirmation,
+    File? profilePhoto,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    bool success = false;
+
+    try {
+      // Check internet connection before attempting update
+      final hasInternet = await ApiService.isApiAccessible();
+      if (!hasInternet) {
+        _error = 'Unable to connect to the server. Please try again later.';
+        return false;
+      }
+
+      final result = await ApiService.updateProfile(
+        name: name,
+        gender: gender,
+        level: level,
+        password: password,
+        passwordConfirmation: passwordConfirmation,
+        profilePhoto: profilePhoto,
+      );
+
+      if (result['success']) {
+        _user = DatabaseService.getCurrentUser();
+        success = true;
+      } else {
+        _error = result['message'];
+      }
+    } catch (e) {
+      _error = 'Unable to connect to the server. Please try again later.';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+
+    return success;
+  }
+
+  // Check if user is authenticated using only cached data (no API calls)
+  bool checkCachedAuthentication() {
+    // Check if we have a valid local user without making API calls
+    final localUser = DatabaseService.getCurrentUser();
+    _user = localUser; // Set the user from local cache
+
+    return localUser != null;
+  }
+}
