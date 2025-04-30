@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:shopspot/providers/location_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/product_provider.dart';
 import '../providers/restaurant_provider.dart';
@@ -14,10 +16,10 @@ class ProductDetailsScreen extends StatefulWidget {
   final int productId;
 
   const ProductDetailsScreen({
-    Key? key, 
-    required this.restaurantId, 
+    super.key,
+    required this.restaurantId,
     required this.productId,
-  }) : super(key: key);
+  });
 
   @override
   _ProductDetailsScreenState createState() => _ProductDetailsScreenState();
@@ -37,10 +39,12 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   Future<void> _loadRestaurantAndLocation() async {
     try {
       // Get restaurant details
-      final restaurants = await Provider.of<RestaurantProvider>(context, listen: false)
-          .getRestaurantsForProduct(widget.productId);
-      
-      final restaurant = restaurants.firstWhere((r) => r.id == widget.restaurantId);
+      final restaurants =
+          await Provider.of<RestaurantProvider>(context, listen: false)
+              .getRestaurantsForProduct(widget.productId);
+
+      final restaurant =
+          restaurants.firstWhere((r) => r.id == widget.restaurantId);
       setState(() {
         _restaurant = restaurant;
       });
@@ -68,7 +72,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           throw Exception('Location permissions are denied.');
         }
       }
-      
+
       if (permission == LocationPermission.deniedForever) {
         throw Exception('Location permissions are permanently denied.');
       }
@@ -86,27 +90,22 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
   double _calculateDistance() {
     if (_currentPosition == null || _restaurant == null) return 0;
-    
+
     return Geolocator.distanceBetween(
-      _currentPosition!.latitude,
-      _currentPosition!.longitude,
-      _restaurant!.latitude,
-      _restaurant!.longitude,
-    ) / 1000; // Convert to km
+          _currentPosition!.latitude,
+          _currentPosition!.longitude,
+          _restaurant!.latitude,
+          _restaurant!.longitude,
+        ) /
+        1000; // Convert to km
   }
 
-  Future<void> _openGoogleMaps() async {
+  Future<void> _openMaps(context) async {
     if (_restaurant == null) return;
-    
-    final url = 'https://www.google.com/maps/dir/?api=1&destination=${_restaurant!.latitude},${_restaurant!.longitude}';
-    
-    if (await canLaunch(url)) {
-      await launch(url);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open maps app')),
-      );
-    }
+    var locationProvider =
+        Provider.of<LocationProvider>(context, listen: false);
+    locationProvider.openGoogleMapWithDestination(
+        _restaurant!.latitude, _restaurant!.longitude);
   }
 
   @override
@@ -121,7 +120,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           children: [
             FutureBuilder<Product?>(
               future: Provider.of<ProductProvider>(context, listen: false)
-                  .getProductDetailsForRestaurant(widget.restaurantId, widget.productId),
+                  .getProductDetailsForRestaurant(
+                      widget.restaurantId, widget.productId),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
@@ -132,7 +132,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                   );
                 }
 
-                if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) {
+                if (snapshot.hasError ||
+                    !snapshot.hasData ||
+                    snapshot.data == null) {
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
@@ -224,7 +226,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       child: ElevatedButton.icon(
                         icon: const Icon(Icons.directions),
                         label: const Text('Get Directions'),
-                        onPressed: _openGoogleMaps,
+                        onPressed: () {
+                          _openMaps(context);
+                        },
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -236,31 +240,79 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: GoogleMap(
-                          initialCameraPosition: CameraPosition(
-                            target: LatLng(
+                        child: FlutterMap(
+                          options: MapOptions(
+                            initialCenter: LatLng(
                               _restaurant!.latitude,
                               _restaurant!.longitude,
                             ),
-                            zoom: 15,
-                          ),
-                          markers: {
-                            Marker(
-                              markerId: MarkerId(_restaurant!.id.toString()),
-                              position: LatLng(
-                                _restaurant!.latitude,
-                                _restaurant!.longitude,
-                              ),
-                              infoWindow: InfoWindow(
-                                title: _restaurant!.name,
-                                snippet: _restaurant!.location,
-                              ),
+                            initialZoom: 15,
+                            interactionOptions: const InteractionOptions(
+                              enableScrollWheel: false,
                             ),
-                          },
-                          zoomControlsEnabled: false,
-                          mapToolbarEnabled: false,
-                          myLocationEnabled: _currentPosition != null,
-                          myLocationButtonEnabled: false,
+                            // No direct equivalent for mapToolbarEnabled, zoomControlsEnabled
+                          ),
+                          children: [
+                            TileLayer(
+                              urlTemplate:
+                                  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                              // subdomains: const ['a', 'b', 'c'],
+                              userAgentPackageName: 'com.example.shopspot',
+                            ),
+                            MarkerLayer(
+                              markers: [
+                                Marker(
+                                  point: LatLng(
+                                    _restaurant!.latitude,
+                                    _restaurant!.longitude,
+                                  ),
+                                  width: 40,
+                                  height: 40,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          title: Text(_restaurant!.name),
+                                          content: Text(_restaurant!.location),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(context),
+                                              child: const Text('Close'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                    child: const Icon(
+                                      Icons.location_on,
+                                      color: Colors.red,
+                                      size: 30,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (_currentPosition != null)
+                              MarkerLayer(
+                                markers: [
+                                  Marker(
+                                    point: LatLng(
+                                      _currentPosition!.latitude,
+                                      _currentPosition!.longitude,
+                                    ),
+                                    width: 40,
+                                    height: 40,
+                                    child: const Icon(
+                                      Icons.my_location,
+                                      color: Colors.blue,
+                                      size: 20,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ],
                         ),
                       ),
                     ),
@@ -281,4 +333,4 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       ),
     );
   }
-} 
+}

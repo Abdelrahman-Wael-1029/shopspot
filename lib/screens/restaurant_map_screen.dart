@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
+import 'package:shopspot/providers/location_provider.dart';
 import '../models/restaurant.dart';
 
 class RestaurantMapScreen extends StatefulWidget {
@@ -17,8 +20,8 @@ class RestaurantMapScreen extends StatefulWidget {
 }
 
 class _RestaurantMapScreenState extends State<RestaurantMapScreen> {
-  late GoogleMapController _mapController;
-  Set<Marker> _markers = {};
+  final MapController _mapController = MapController();
+  List<Marker> _markers = [];
 
   @override
   void initState() {
@@ -29,14 +32,43 @@ class _RestaurantMapScreenState extends State<RestaurantMapScreen> {
   void _createMarkers() {
     _markers = widget.restaurants.map((restaurant) {
       return Marker(
-        markerId: MarkerId(restaurant.id.toString()),
-        position: LatLng(restaurant.latitude, restaurant.longitude),
-        infoWindow: InfoWindow(
-          title: restaurant.name,
-          snippet: restaurant.location,
+        point: LatLng(restaurant.latitude, restaurant.longitude),
+        width: 80,
+        height: 80,
+        child: GestureDetector(
+          onTap: () {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Text(restaurant.name),
+                content: Text(restaurant.location),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text('Close'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      var locationProvider =
+                          Provider.of<LocationProvider>(context, listen: false);
+                      locationProvider.openGoogleMapWithDestination(
+                          restaurant.latitude, restaurant.longitude);
+                    },
+                    child: Text('Open Maps'),
+                  ),
+                ],
+              ),
+            );
+          },
+          child: const Icon(
+            Icons.location_on,
+            color: Colors.red,
+            size: 40,
+          ),
         ),
       );
-    }).toSet();
+    }).toList();
   }
 
   void _fitBounds() {
@@ -54,37 +86,58 @@ class _RestaurantMapScreenState extends State<RestaurantMapScreen> {
       if (restaurant.longitude > maxLng) maxLng = restaurant.longitude;
     }
 
-    _mapController.animateCamera(
-      CameraUpdate.newLatLngBounds(
-        LatLngBounds(
-          southwest: LatLng(minLat - 0.05, minLng - 0.05),
-          northeast: LatLng(maxLat + 0.05, maxLng + 0.05),
-        ),
-        50,
+    // Add some padding to the bounds
+    final bounds = LatLngBounds(
+      LatLng(minLat - 0.05, minLng - 0.05),
+      LatLng(maxLat + 0.05, maxLng + 0.05),
+    );
+
+    _mapController.fitBounds(
+      bounds,
+      options: const FitBoundsOptions(
+        padding: EdgeInsets.all(50),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (widget.restaurants.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('Restaurants for ${widget.productName}'),
+        ),
+        body: const Center(
+          child: Text('No restaurants available'),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Restaurants for ${widget.productName}'),
       ),
-      body: GoogleMap(
-        initialCameraPosition: CameraPosition(
-          target: LatLng(
+      body: FlutterMap(
+        mapController: _mapController,
+        options: MapOptions(
+          initialCenter: LatLng(
             widget.restaurants.first.latitude,
             widget.restaurants.first.longitude,
           ),
-          zoom: 12,
+          initialZoom: 12,
+          onMapReady: () {
+            Future.delayed(const Duration(milliseconds: 200), _fitBounds);
+          },
         ),
-        markers: _markers,
-        onMapCreated: (GoogleMapController controller) {
-          _mapController = controller;
-          Future.delayed(Duration(milliseconds: 200), _fitBounds);
-        },
+        children: [
+          TileLayer(
+            urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+            // subdomains: const ['a', 'b', 'c'],
+            userAgentPackageName: 'com.example.shopspot',
+          ),
+          MarkerLayer(markers: _markers),
+        ],
       ),
     );
   }
-} 
+}
