@@ -5,20 +5,18 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shopspot/providers/location_provider.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../providers/product_provider.dart';
 import '../providers/restaurant_provider.dart';
 import '../models/product.dart';
 import '../models/restaurant.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final int restaurantId;
-  final int productId;
+  final Product product;
 
   const ProductDetailsScreen({
     super.key,
     required this.restaurantId,
-    required this.productId,
+    required this.product,
   });
 
   @override
@@ -33,7 +31,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadRestaurantAndLocation();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadRestaurantAndLocation());
   }
 
   Future<void> _loadRestaurantAndLocation() async {
@@ -41,7 +39,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       // Get restaurant details
       final restaurants =
           await Provider.of<RestaurantProvider>(context, listen: false)
-              .getRestaurantsForProduct(widget.productId);
+              .getRestaurantsForProduct(widget.product.id);
 
       final restaurant =
           restaurants.firstWhere((r) => r.id == widget.restaurantId);
@@ -118,80 +116,49 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            FutureBuilder<Product?>(
-              future: Provider.of<ProductProvider>(context, listen: false)
-                  .getProductDetailsForRestaurant(
-                      widget.restaurantId, widget.productId),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(32.0),
-                      child: CircularProgressIndicator(),
-                    ),
-                  );
-                }
-
-                if (snapshot.hasError ||
-                    !snapshot.hasData ||
-                    snapshot.data == null) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Text(
-                        'Failed to load product details: ${snapshot.error ?? "Product not found"}',
-                        textAlign: TextAlign.center,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CachedNetworkImage(
+                  imageUrl: widget.product.imageUrl,
+                  height: 200,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    height: 200,
+                    color: Colors.grey[300],
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    height: 200,
+                    color: Colors.grey[300],
+                    child: const Icon(Icons.fastfood, size: 60),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.product.name,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                  );
-                }
-
-                final product = snapshot.data!;
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    CachedNetworkImage(
-                      imageUrl: product.imageUrl,
-                      height: 200,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
-                        height: 200,
-                        color: Colors.grey[300],
-                        child: const Center(child: CircularProgressIndicator()),
+                      const SizedBox(height: 8),
+                      Text(
+                        widget.product.description,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[700],
+                        ),
                       ),
-                      errorWidget: (context, url, error) => Container(
-                        height: 200,
-                        color: Colors.grey[300],
-                        child: const Icon(Icons.fastfood, size: 60),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            product.name,
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            product.description,
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey[700],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
-              },
+                    ],
+                  ),
+                ),
+              ],
             ),
             if (_restaurant != null) ...[
               const Divider(thickness: 1),

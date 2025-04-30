@@ -10,10 +10,10 @@ class ProductsScreen extends StatefulWidget {
   final String restaurantName;
 
   const ProductsScreen({
-    Key? key,
+    super.key,
     required this.restaurantId,
     required this.restaurantName,
-  }) : super(key: key);
+  });
 
   @override
   _ProductsScreenState createState() => _ProductsScreenState();
@@ -23,8 +23,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => Provider.of<ProductProvider>(context, listen: false)
-        .fetchProductsForRestaurant(widget.restaurantId));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.microtask(() =>
+          Provider.of<ProductProvider>(context, listen: false)
+              .fetchProductsForRestaurant(widget.restaurantId));
+    });
   }
 
   @override
@@ -83,11 +86,11 @@ class ProductCard extends StatelessWidget {
   final String restaurantName;
 
   const ProductCard({
-    Key? key,
+    super.key,
     required this.product,
     required this.restaurantId,
     required this.restaurantName,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -99,7 +102,7 @@ class ProductCard extends StatelessWidget {
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => ProductDetailsScreen(
-                productId: product.id,
+                product: product,
                 restaurantId: restaurantId,
               ),
             ),

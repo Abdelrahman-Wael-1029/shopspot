@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shopspot/models/product.dart';
 import 'package:shopspot/screens/auth/login_screen.dart';
 import 'package:shopspot/screens/auth/signup_screen.dart';
 import '../screens/restaurants_screen.dart';
@@ -46,7 +47,7 @@ class AppRoutes {
         final args = settings.arguments as Map<String, dynamic>;
         return MaterialPageRoute(
           builder: (_) => ProductDetailsScreen(
-            productId: args['productId'] as int,
+            product: args['product'] as Product,
             restaurantId: args['restaurantId'] as int,
           ),
         );
@@ -90,7 +91,8 @@ class AppRoutes {
   }
 
   // Navigation helper methods
-  static void navigateToProducts(BuildContext context, {
+  static void navigateToProducts(
+    BuildContext context, {
     required int restaurantId,
     required String restaurantName,
   }) {
@@ -104,7 +106,8 @@ class AppRoutes {
     );
   }
 
-  static void navigateToProductDetails(BuildContext context, {
+  static void navigateToProductDetails(
+    BuildContext context, {
     required int productId,
     required int restaurantId,
   }) {
@@ -118,7 +121,8 @@ class AppRoutes {
     );
   }
 
-  static void navigateToRestaurantMap(BuildContext context, {
+  static void navigateToRestaurantMap(
+    BuildContext context, {
     required List<dynamic> restaurants,
     required String productName,
   }) {
@@ -131,4 +135,4 @@ class AppRoutes {
       },
     );
   }
-} 
+}

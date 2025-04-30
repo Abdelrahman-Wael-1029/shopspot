@@ -248,7 +248,7 @@ class SearchResultItem extends StatelessWidget {
                           Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (context) => ProductDetailsScreen(
-                                productId: product.id,
+                                product: product,
                                 restaurantId: restaurant.id,
                               ),
                             ),

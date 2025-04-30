@@ -764,7 +764,6 @@ class ApiService {
           .timeout(const Duration(seconds: 5));
       
       final responseData = jsonDecode(response.body);
-      print(responseData);
       // Cleanup the client
       client.close();
       _removeClient(requestId);

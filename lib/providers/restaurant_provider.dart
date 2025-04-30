@@ -38,6 +38,7 @@ class RestaurantProvider with ChangeNotifier {
   Future<List<Restaurant>> getRestaurantsForProduct(int productId) async {
     try {
       final result = await ApiService.getProductRestaurants(productId);
+      print(result);
       
       if (result['success']) {
         return result['restaurants'];

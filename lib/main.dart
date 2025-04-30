@@ -10,6 +10,7 @@ import 'providers/index_provider.dart';
 import 'services/database_service.dart';
 import 'providers/connectivity_provider.dart';
 import 'utils/app_routes.dart';
+
 void main() async {
   // Ensure Flutter is initialized - this is important!
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -44,6 +45,15 @@ class MyApp extends StatelessWidget {
       title: 'Restaurant App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+        ),
+        scaffoldBackgroundColor: Colors.white,
+        bottomAppBarTheme: const BottomAppBarTheme(
+          color: Colors.white,
+          surfaceTintColor: Colors.transparent,
+        ),
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
@@ -79,7 +89,8 @@ class _InitScreenState extends State<InitScreen> {
     final isAuthenticated = authProvider.checkCachedAuthentication();
 
     // Check connectivity status
-    final connectivityProvider = Provider.of<ConnectivityProvider>(context, listen: false);
+    final connectivityProvider =
+        Provider.of<ConnectivityProvider>(context, listen: false);
     await connectivityProvider.initConnectivity();
 
     // Wait a brief moment to ensure proper initialization
@@ -178,7 +189,8 @@ class _AppLifecycleManagerState extends State<AppLifecycleManager>
     // When app resumes, refresh data if needed
     if (state == AppLifecycleState.resumed) {
       _ConnectivityProvider.checkConnectivity();
-      if (_ConnectivityProvider.shouldRefresh && _authProvider.isAuthenticated) {
+      if (_ConnectivityProvider.shouldRefresh &&
+          _authProvider.isAuthenticated) {
         // Refresh data from server - but not profile data (will be refreshed on demand)
         _ConnectivityProvider.markRefreshed();
       }
