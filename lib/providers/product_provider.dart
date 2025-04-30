@@ -20,7 +20,7 @@ class ProductProvider with ChangeNotifier {
 
     try {
       final result = await ApiService.getRestaurantProducts(restaurantId);
-      
+      print(result);      
       if (result['success']) {
         _products = result['products'];
         _isLoading = false;

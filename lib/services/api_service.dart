@@ -341,6 +341,7 @@ class ApiService {
 
         return {
           'success': true,
+          'user': userWithToken,
         };
       } else {
         // Cleanup the client
@@ -546,7 +547,6 @@ class ApiService {
             headers: await _getHeaders(authorized: true),
           )
           .timeout(const Duration(seconds: 5));
-
       final responseData = jsonDecode(response.body);
 
       // Cleanup the client
@@ -554,8 +554,8 @@ class ApiService {
       _removeClient(requestId);
 
       if (response.statusCode == 200) {
-        final List<Restaurant> restaurants =
-            List<Restaurant>.from(responseData.map((item) => Restaurant.fromJson(item)).toList());
+        final List<Restaurant> restaurants = List<Restaurant>.from(
+            responseData.map((item) => Restaurant.fromJson(item)).toList());
 
         return {
           'success': true,
@@ -601,7 +601,6 @@ class ApiService {
             headers: await _getHeaders(authorized: true),
           )
           .timeout(const Duration(seconds: 5));
-
       final responseData = jsonDecode(response.body);
 
       // Cleanup the client
@@ -609,9 +608,8 @@ class ApiService {
       _removeClient(requestId);
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = responseData['data'];
-        final List<Product> products =
-            data.map((item) => Product.fromJson(item)).toList();
+        final List<Product> products = List<Product>.from(
+            responseData.map((item) => Product.fromJson(item)).toList());
 
         return {
           'success': true,
@@ -631,6 +629,7 @@ class ApiService {
         'message': 'Connection timed out. Please try again later.',
       };
     } catch (e) {
+      print(e);
       // Cleanup the client
       client.close();
       _removeClient(requestId);
@@ -664,9 +663,8 @@ class ApiService {
       _removeClient(requestId);
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = responseData['data'];
-        final List<Product> products =
-            data.map((item) => Product.fromJson(item)).toList();
+        final List<Product> products = List<Product>.from(
+            responseData.map((item) => Product.fromJson(item)).toList());
 
         return {
           'success': true,
@@ -718,9 +716,8 @@ class ApiService {
       _removeClient(requestId);
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = responseData['data'];
-        final List<Product> products =
-            data.map((item) => Product.fromJson(item)).toList();
+        final List<Product> products = List<Product>.from(
+            responseData.map((item) => Product.fromJson(item)).toList());
 
         return {
           'success': true,
@@ -773,9 +770,8 @@ class ApiService {
       _removeClient(requestId);
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = responseData['data'];
-        final List<Restaurant> restaurants =
-            data.map((item) => Restaurant.fromJson(item)).toList();
+        final List<Restaurant> restaurants = List<Restaurant>.from(
+            responseData.map((item) => Restaurant.fromJson(item)).toList());
 
         return {
           'success': true,
@@ -828,8 +824,7 @@ class ApiService {
       _removeClient(requestId);
 
       if (response.statusCode == 200) {
-        final productData = responseData['data'];
-        final product = Product.fromJson(productData);
+        final product = Product.fromJson(responseData);
 
         return {
           'success': true,

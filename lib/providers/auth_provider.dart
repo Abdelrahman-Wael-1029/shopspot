@@ -40,9 +40,7 @@ class AuthProvider extends ChangeNotifier {
       if (result['success']) {
         _user = DatabaseService.getCurrentUser();
         success = true;
-        if (context.mounted) {
-         
-        }
+        if (context.mounted) {}
       } else {
         _error = result['message'];
         _validationErrors = result['errors'] as Map<String, dynamic>?;
@@ -93,9 +91,7 @@ class AuthProvider extends ChangeNotifier {
       if (result['success']) {
         _user = DatabaseService.getCurrentUser();
         success = true;
-        if (context.mounted) {
-        
-        }
+        if (context.mounted) {}
       } else {
         _error = result['message'];
         _validationErrors = result['errors'] as Map<String, dynamic>?;
@@ -115,7 +111,8 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    try {      // Try to logout from server if we have internet
+    try {
+      // Try to logout from server if we have internet
       final hasInternet = await ApiService.isApiAccessible();
       if (hasInternet) {
         await ApiService.logout();

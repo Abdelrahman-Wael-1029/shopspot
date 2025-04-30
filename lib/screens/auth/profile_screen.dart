@@ -308,7 +308,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               });
             },
           ),
-
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'logout') {

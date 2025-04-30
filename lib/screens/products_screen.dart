@@ -23,10 +23,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => 
-      Provider.of<ProductProvider>(context, listen: false)
-        .fetchProductsForRestaurant(widget.restaurantId)
-    );
+    Future.microtask(() => Provider.of<ProductProvider>(context, listen: false)
+        .fetchProductsForRestaurant(widget.restaurantId));
   }
 
   @override
@@ -40,7 +38,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
           if (productProvider.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
-          
+
           if (productProvider.error != null) {
             return Center(
               child: Text(
@@ -49,9 +47,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
               ),
             );
           }
-          
+
           if (productProvider.products.isEmpty) {
-            return const Center(child: Text('No products found for this restaurant.'));
+            return const Center(
+                child: Text('No products found for this restaurant.'));
           }
 
           return GridView.builder(
@@ -66,7 +65,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
             itemBuilder: (ctx, i) {
               Product product = productProvider.products[i];
               return ProductCard(
-                product: product, 
+                product: product,
                 restaurantId: widget.restaurantId,
                 restaurantName: widget.restaurantName,
               );
@@ -84,8 +83,8 @@ class ProductCard extends StatelessWidget {
   final String restaurantName;
 
   const ProductCard({
-    Key? key, 
-    required this.product, 
+    Key? key,
+    required this.product,
     required this.restaurantId,
     required this.restaurantName,
   }) : super(key: key);
@@ -111,7 +110,8 @@ class ProductCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(12)),
               child: CachedNetworkImage(
                 imageUrl: product.imageUrl,
                 height: 120,
@@ -161,4 +161,4 @@ class ProductCard extends StatelessWidget {
       ),
     );
   }
-} 
+}

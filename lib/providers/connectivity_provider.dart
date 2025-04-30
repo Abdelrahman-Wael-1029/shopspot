@@ -23,12 +23,12 @@ class ConnectivityProvider with ChangeNotifier {
   bool get isServerUnavailable => _isServerUnavailable;
 
   ConnectivityProvider() {
-    _initConnectivity();
+    initConnectivity();
   }
 
-  void _initConnectivity() {
+  Future<void> initConnectivity() async{
     // Check initial connectivity status
-    checkConnectivity();
+    await checkConnectivity();
 
     // Listen for connectivity changes
     _connectivitySubscription =

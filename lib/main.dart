@@ -10,8 +10,6 @@ import 'providers/index_provider.dart';
 import 'services/database_service.dart';
 import 'providers/connectivity_provider.dart';
 import 'utils/app_routes.dart';
-import 'screens/home_screen.dart';
-
 void main() async {
   // Ensure Flutter is initialized - this is important!
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -79,6 +77,10 @@ class _InitScreenState extends State<InitScreen> {
     // Check authentication status
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final isAuthenticated = authProvider.checkCachedAuthentication();
+
+    // Check connectivity status
+    final connectivityProvider = Provider.of<ConnectivityProvider>(context, listen: false);
+    await connectivityProvider.initConnectivity();
 
     // Wait a brief moment to ensure proper initialization
     await Future.delayed(const Duration(milliseconds: 500));
