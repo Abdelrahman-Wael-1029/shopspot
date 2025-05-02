@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shopspot/providers/product_provider.dart';
 import 'package:shopspot/providers/restaurant_provider.dart';
 import 'package:provider/provider.dart';
@@ -6,7 +7,7 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:shopspot/utils/app_theme.dart';
 import 'providers/auth_bloc.dart';
 import 'providers/location_provider.dart';
-import 'providers/index_provider.dart';
+import 'providers/index_bloc.dart';
 import 'services/database_service.dart';
 import 'providers/connectivity_provider.dart';
 import 'utils/app_routes.dart';
@@ -25,13 +26,22 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (context) => ConnectivityProvider()),
-        // ChangeNotifierProvider(create: (context) => AuthProvider()),
         ChangeNotifierProvider(create: (context) => LocationProvider()),
         ChangeNotifierProvider(create: (context) => ProductProvider()),
         ChangeNotifierProvider(create: (context) => RestaurantProvider()),
-        ChangeNotifierProvider(create: (context) => IndexProvider()),
+        
       ],
-      child: const MyApp(),
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider<AuthBloc>(
+            create: (context) => AuthBloc(), // You can pass dependencies here if needed
+          ),
+          BlocProvider<IndexBloc>(
+            create: (context) => IndexBloc(), // You can pass dependencies here if needed
+          ),
+        ],
+        child: const MyApp(),
+      ),
     ),
   );
 }

@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:shopspot/providers/product_provider.dart';
 import 'package:shopspot/providers/restaurant_provider.dart';
 import 'package:shopspot/screens/auth/profile_screen.dart';
-import '../providers/index_provider.dart';
+import '../providers/index_bloc.dart';
 import 'restaurants_screen.dart';
 import 'search_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -31,11 +32,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<IndexProvider>(
-      builder: (context, indexProvider, child) {
-        return Scaffold(
+    return BlocBuilder(builder: (_, state) {
+      final indexProvider = Provider.of<IndexBloc>(context);
+      return Scaffold(
           body: IndexedStack(
-            index: indexProvider.currentIndex,
+            index: indexProvider.state,
             children: [
               RestaurantsScreen(),
               const SearchScreen(),
@@ -43,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           bottomNavigationBar: BottomNavigationBar(
-            currentIndex: indexProvider.currentIndex,
+            currentIndex: indexProvider.state,
             onTap: (index) => indexProvider.changeIndex(index),
             items: const [
               BottomNavigationBarItem(
@@ -61,7 +62,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         );
-      },
-    );
+    });
+
+
+
+    
   }
 }
