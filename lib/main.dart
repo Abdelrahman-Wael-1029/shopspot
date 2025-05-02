@@ -9,7 +9,7 @@ import 'package:shopspot/utils/app_theme.dart';
 import 'providers/auth_bloc.dart';
 import 'providers/index_bloc.dart';
 import 'services/database_service.dart';
-import 'providers/connectivity_provider.dart';
+import 'providers/connectivity_bloc.dart';
 import 'utils/app_routes.dart';
 
 void main() async {
@@ -25,8 +25,6 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (context) => ConnectivityProvider()),
-        
         ChangeNotifierProvider(create: (context) => ProductProvider()),
         ChangeNotifierProvider(create: (context) => RestaurantProvider()),
         
@@ -41,6 +39,9 @@ void main() async {
           ),
           BlocProvider<LocationBloc>(
             create: (context) => LocationBloc(), // You can pass dependencies here if needed
+          ),
+          BlocProvider<ConnectivityBloc>(
+            create: (context) => ConnectivityBloc(), // You can pass dependencies here if needed
           ),
         ],
         child: const MyApp(),
@@ -95,7 +96,7 @@ class _InitScreenState extends State<InitScreen> {
 
     // Check connectivity status
     final connectivityProvider =
-        Provider.of<ConnectivityProvider>(context, listen: false);
+        Provider.of<ConnectivityBloc>(context, listen: false);
     await connectivityProvider.initConnectivity();
 
     // Wait a brief moment to ensure proper initialization
@@ -158,7 +159,7 @@ class AppLifecycleManager extends StatefulWidget {
 
 class _AppLifecycleManagerState extends State<AppLifecycleManager>
     with WidgetsBindingObserver {
-  late ConnectivityProvider _ConnectivityProvider;
+  late ConnectivityBloc _ConnectivityProvider;
   late AuthBloc _authProvider;
   bool _providersInitialized = false;
 
@@ -180,7 +181,7 @@ class _AppLifecycleManagerState extends State<AppLifecycleManager>
     // Initialize providers once when dependencies are available
     if (!_providersInitialized) {
       _ConnectivityProvider =
-          Provider.of<ConnectivityProvider>(context, listen: false);
+          Provider.of<ConnectivityBloc>(context, listen: false);
       _authProvider = Provider.of<AuthBloc>(context, listen: false);
       _providersInitialized = true;
     }

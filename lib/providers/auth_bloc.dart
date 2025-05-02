@@ -5,7 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:provider/provider.dart';
 import 'package:shopspot/providers/auth_state.dart';
-import 'package:shopspot/providers/connectivity_provider.dart';
+import 'package:shopspot/providers/connectivity_bloc.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
 import '../services/database_service.dart';
@@ -88,7 +88,7 @@ class AuthBloc extends Cubit<AuthState> {
   Future<void> getProfile(BuildContext context) async {
     emit(ProfileLoading());
     final connectivityProvider =
-        Provider.of<ConnectivityProvider>(context, listen: false);
+        Provider.of<ConnectivityBloc>(context, listen: false);
 
     // Check if local user data exists
     final localUser = DatabaseService.getCurrentUser();

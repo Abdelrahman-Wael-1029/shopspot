@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:shopspot/providers/connectivity_provider.dart';
+import 'package:shopspot/providers/connectivity_bloc.dart';
+import 'package:shopspot/providers/connectivity_state.dart';
 import 'package:shopspot/utils/app_colors.dart';
 import 'package:shopspot/widgets/custom_search.dart';
 import '../providers/restaurant_provider.dart';
@@ -25,23 +27,19 @@ class RestaurantsScreen extends StatelessWidget {
         foregroundColor: AppColors.white,
         elevation: 0,
         actions: [
-          // consumer on connectivity provider for show status connection
-          Consumer<ConnectivityProvider>(
-            builder: (ctx, connectivityProvider, child) {
-              return Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Icon(
-                  connectivityProvider.isOnline
-                      ? (Icons.wifi)
-                      : (Icons.wifi_off),
-                  color: connectivityProvider.isOnline
-                      ? AppColors.accent
-                      : AppColors.error,
-                ),
-              );
-            },
-          )
-        ],
+  BlocBuilder<ConnectivityBloc, ConnectivityState>(
+    builder: (context, state) {
+      final isOnline = state is ConnectivityOnline;
+      return Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Icon(
+          isOnline ? Icons.wifi : Icons.wifi_off,
+          color: isOnline ? AppColors.accent : AppColors.error,
+        ),
+      );
+    },
+  ),
+],
       ),
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: RefreshIndicator(

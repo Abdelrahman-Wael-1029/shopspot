@@ -5,9 +5,10 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:shopspot/providers/auth_state.dart';
+import 'package:shopspot/providers/connectivity_state.dart';
 import '../../models/user_model.dart';
 import '../../providers/auth_bloc.dart';
-import '../../providers/connectivity_provider.dart';
+import '../../providers/connectivity_bloc.dart';
 import '../../utils/validator.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
@@ -56,34 +57,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadUserProfile() async {
-    final authProvider = Provider.of<AuthBloc>(context, listen: false);
-    final connectivityProvider =
-        Provider.of<ConnectivityProvider>(context, listen: false);
+  final authBloc = context.read<AuthBloc>();
+  final connectivityBloc = context.read<ConnectivityBloc>();
+  final currentState = connectivityBloc.state;
 
-    // Check if we need to get fresh data from server
-    final shouldLoadFromServer =
-        connectivityProvider.isOnline && connectivityProvider.shouldRefresh;
+  final isOnline = currentState is ConnectivityOnline;
+  final shouldRefresh = connectivityBloc.shouldRefresh;
 
-    // Display current cached data immediately if available
-    _updateUIWithUserData(authProvider.currentUser);
+  // Check if we need to get fresh data from server
+  final shouldLoadFromServer = isOnline && shouldRefresh;
 
-    if (shouldLoadFromServer) {
-      // Load from server
-      await authProvider.getProfile(context);
+  // Display current cached data immediately if available
+  _updateUIWithUserData(authBloc.currentUser);
 
-      // Update UI with fresh data
-      _updateUIWithUserData(authProvider.currentUser);
+  if (shouldLoadFromServer) {
+    // Load from server
+    await authBloc.getProfile(context);
 
-      // Mark as refreshed
-      connectivityProvider.markRefreshed();
-    } else if (!connectivityProvider.isOnline) {
-      // Show toast if we're offline
-      Fluttertoast.showToast(
-        msg: "You are offline. Showing cached profile data.",
-        backgroundColor: Colors.red,
-      );
-    }
+    // Update UI with fresh data
+    _updateUIWithUserData(authBloc.currentUser);
+
+    // Mark as refreshed
+    connectivityBloc.markRefreshed();
+  } else if (!isOnline) {
+    // Show toast if we're offline
+    Fluttertoast.showToast(
+      msg: "You are offline. Showing cached profile data.",
+      backgroundColor: Colors.red,
+    );
   }
+}
+
 
   void _updateUIWithUserData(User? user) {
     if (user == null) return;
