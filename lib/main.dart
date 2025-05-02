@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shopspot/providers/location_bloc.dart';
 import 'package:shopspot/providers/product_provider.dart';
 import 'package:shopspot/providers/restaurant_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:shopspot/utils/app_theme.dart';
 import 'providers/auth_bloc.dart';
-import 'providers/location_provider.dart';
 import 'providers/index_bloc.dart';
 import 'services/database_service.dart';
 import 'providers/connectivity_provider.dart';
@@ -26,7 +26,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (context) => ConnectivityProvider()),
-        ChangeNotifierProvider(create: (context) => LocationProvider()),
+        
         ChangeNotifierProvider(create: (context) => ProductProvider()),
         ChangeNotifierProvider(create: (context) => RestaurantProvider()),
         
@@ -38,6 +38,9 @@ void main() async {
           ),
           BlocProvider<IndexBloc>(
             create: (context) => IndexBloc(), // You can pass dependencies here if needed
+          ),
+          BlocProvider<LocationBloc>(
+            create: (context) => LocationBloc(), // You can pass dependencies here if needed
           ),
         ],
         child: const MyApp(),
@@ -98,7 +101,7 @@ class _InitScreenState extends State<InitScreen> {
     // Wait a brief moment to ensure proper initialization
     await Future.delayed(const Duration(milliseconds: 500));
 
-    final locationProvider = Provider.of<LocationProvider>(context, listen: false);
+    final locationProvider = Provider.of<LocationBloc>(context, listen: false);
     await locationProvider.initLocation();
     // Remove splash screen
     FlutterNativeSplash.remove();
