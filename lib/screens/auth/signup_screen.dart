@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:provider/provider.dart';
+import 'package:shopspot/providers/auth_bloc.dart';
+import 'package:shopspot/providers/auth_state.dart';
 import 'package:shopspot/utils/app_routes.dart';
-import '../../providers/auth_provider.dart';
 import '../../utils/validator.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
@@ -93,10 +95,9 @@ class _SignupScreenState extends State<SignupScreen> {
   Future<void> _register() async {
     if (!_validateInputs()) return;
 
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthBloc>(context, listen: false);
 
-    final success = await authProvider.register(
-      context: context,
+    authProvider.register(
       name: _nameController.text,
       email: _emailController.text,
       password: _passwordController.text,
@@ -104,90 +105,10 @@ class _SignupScreenState extends State<SignupScreen> {
       gender: _gender,
       level: _level,
     );
-
-    if (success) {
-      Fluttertoast.showToast(
-        msg: "Signup successful",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        backgroundColor: Colors.green,
-        textColor: Colors.white,
-      );
-
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, AppRoutes.home);
-      }
-    } else {
-      if (mounted) {
-        // Get validation errors from the response
-        final validationErrors = authProvider.validationErrors;
-        String errorMessage = authProvider.error ??
-            "Unable to create account. Please check your information and try again.";
-
-        // Clear previous field errors
-        setState(() {
-          _nameError = null;
-          _emailError = null;
-          _passwordError = null;
-          _confirmPasswordError = null;
-        });
-
-        // Process validation errors directly from the API response
-        if (validationErrors != null) {
-          setState(() {
-            // Map server validation errors to specific form fields
-            if (validationErrors.containsKey('name')) {
-              _nameError = validationErrors['name'][0];
-            }
-
-            if (validationErrors.containsKey('email')) {
-              _emailError = validationErrors['email'][0];
-              // Make error message more user-friendly
-              if (_emailError!.contains("has already been taken")) {
-                _emailError = "This email is already registered";
-              }
-            }
-
-            if (validationErrors.containsKey('password')) {
-              _passwordError = validationErrors['password'][0];
-            }
-
-            if (validationErrors.containsKey('password_confirmation')) {
-              _confirmPasswordError =
-                  validationErrors['password_confirmation'][0];
-            }
-          });
-
-          // Set a more user-friendly error message for the toast
-          if (validationErrors.containsKey('student_id') &&
-              validationErrors['student_id'][0]
-                  .contains("has already been taken")) {
-            errorMessage =
-                "Student ID already registered. Please use a different ID.";
-          } else if (validationErrors.containsKey('email') &&
-              validationErrors['email'][0].contains("has already been taken")) {
-            errorMessage =
-                "Email already registered. Please use a different email.";
-          } else {
-            errorMessage = "Please check the highlighted fields for errors.";
-          }
-        }
-
-        Fluttertoast.showToast(
-          msg: errorMessage,
-          toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.BOTTOM,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-        );
-      }
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Sign Up'),
@@ -304,13 +225,93 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
 
               const SizedBox(height: 20),
-
-              // Register button
-              CustomButton(
+              BlocConsumer(builder: (context, state) {
+                if (state is AuthLoading) {
+                  return LinearProgressIndicator();
+                }
+                return CustomButton(
                 text: 'Sign Up',
                 onPressed: _register,
-                isLoading: authProvider.isLoading,
-              ),
+              );
+              } , listener: (context, state) {
+                if (state is AuthFailure) {
+                  if (mounted) {
+                    // Get validation errors from the response
+                    final validationErrors = state.validationErrors;
+                    String errorMessage = state.message;
+
+                    // Clear previous field errors
+                    setState(() {
+                      _nameError = null;
+                      _emailError = null;
+                      _passwordError = null;
+                      _confirmPasswordError = null;
+                    });
+
+                    // Process validation errors directly from the API response
+                    if (validationErrors != null) {
+                      setState(() {
+                        // Map server validation errors to specific form fields
+                        if (validationErrors.containsKey('name')) {
+                          _nameError = validationErrors['name'][0];
+                        }
+
+                        if (validationErrors.containsKey('email')) {
+                          _emailError = validationErrors['email'][0];
+                          // Make error message more user-friendly
+                          if (_emailError!.contains("has already been taken")) {
+                            _emailError = "This email is already registered";
+                          }
+                        }
+
+                        if (validationErrors.containsKey('password')) {
+                          _passwordError = validationErrors['password'][0];
+                        }
+
+                        if (validationErrors.containsKey('password_confirmation')) {
+                          _confirmPasswordError =
+                              validationErrors['password_confirmation'][0];
+                        }
+                      });
+
+                      // Set a more user-friendly error message for the toast
+                      if (validationErrors.containsKey('student_id') &&
+                          validationErrors['student_id'][0]
+                              .contains("has already been taken")) {
+                        errorMessage =
+                            "Student ID already registered. Please use a different ID.";
+                      } else if (validationErrors.containsKey('email') &&
+                          validationErrors['email'][0].contains("has already been taken")) {
+                        errorMessage =
+                            "Email already registered. Please use a different email.";
+                      } else {
+                        errorMessage = "Please check the highlighted fields for errors.";
+                      }
+                    }
+
+                    Fluttertoast.showToast(
+                      msg: errorMessage,
+                      toastLength: Toast.LENGTH_LONG,
+                      gravity: ToastGravity.BOTTOM,
+                      backgroundColor: Colors.red,
+                      textColor: Colors.white,
+                    );
+                  }
+
+                } else if (state is AuthSuccess) {
+                  Fluttertoast.showToast(
+                  msg: "Login successful",
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.BOTTOM,
+                  backgroundColor: Colors.green,
+                  textColor: Colors.white,
+                );
+
+                Navigator.pushReplacementNamed(context, AppRoutes.home);
+                }
+              }),
+              // Register button
+              
 
               const SizedBox(height: 20),
 

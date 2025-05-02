@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:provider/provider.dart';
+import 'package:shopspot/providers/auth_bloc.dart';
+import 'package:shopspot/providers/auth_state.dart';
 import 'package:shopspot/utils/app_routes.dart';
-import '../../providers/auth_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 
@@ -57,42 +59,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _login() async {
     if (!_validateInputs()) return;
-
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-    final success = await authProvider.login(
-      context,
+    final authProvider = Provider.of<AuthBloc>(context, listen: false);
+    authProvider.login(
       _emailController.text,
       _passwordController.text,
     );
-
-    if (success) {
-      Fluttertoast.showToast(
-        msg: "Login successful",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        backgroundColor: Colors.green,
-        textColor: Colors.white,
-      );
-
-      Navigator.pushReplacementNamed(context, AppRoutes.home);
-    } else {
-      if (mounted) {
-        Fluttertoast.showToast(
-          msg: authProvider.error ??
-              "Unable to sign in. Please check your credentials and try again.",
-          toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.BOTTOM,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-        );
-      }
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -168,12 +143,40 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 20),
 
-              // Login button
-              CustomButton(
+              BlocConsumer(builder: (context, state) {
+                if (state is AuthLoading) {
+                  return LinearProgressIndicator();
+                }
+                return CustomButton(
                 text: 'Login',
                 onPressed: _login,
-                isLoading: authProvider.isLoading,
-              ),
+              );
+              } , listener: (context, state) {
+                if (state is AuthFailure) {
+                  if (mounted) {
+                  Fluttertoast.showToast(
+                    msg: state.message,
+                    toastLength: Toast.LENGTH_LONG,
+                    gravity: ToastGravity.BOTTOM,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                  );
+                }
+
+                } else if (state is AuthSuccess) {
+                  Fluttertoast.showToast(
+                  msg: "Login successful",
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.BOTTOM,
+                  backgroundColor: Colors.green,
+                  textColor: Colors.white,
+                );
+
+                Navigator.pushReplacementNamed(context, AppRoutes.home);
+                }
+              }),
+
+              
 
               const SizedBox(height: 20),
 

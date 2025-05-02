@@ -4,7 +4,7 @@ import 'package:shopspot/providers/restaurant_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:shopspot/utils/app_theme.dart';
-import 'providers/auth_provider.dart';
+import 'providers/auth_bloc.dart';
 import 'providers/location_provider.dart';
 import 'providers/index_provider.dart';
 import 'services/database_service.dart';
@@ -25,7 +25,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (context) => ConnectivityProvider()),
-        ChangeNotifierProvider(create: (context) => AuthProvider()),
+        // ChangeNotifierProvider(create: (context) => AuthProvider()),
         ChangeNotifierProvider(create: (context) => LocationProvider()),
         ChangeNotifierProvider(create: (context) => ProductProvider()),
         ChangeNotifierProvider(create: (context) => RestaurantProvider()),
@@ -77,7 +77,7 @@ class _InitScreenState extends State<InitScreen> {
     
 
     // Check authentication status
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthBloc>(context, listen: false);
     final isAuthenticated = authProvider.checkCachedAuthentication();
 
     // Check connectivity status
@@ -146,7 +146,7 @@ class AppLifecycleManager extends StatefulWidget {
 class _AppLifecycleManagerState extends State<AppLifecycleManager>
     with WidgetsBindingObserver {
   late ConnectivityProvider _ConnectivityProvider;
-  late AuthProvider _authProvider;
+  late AuthBloc _authProvider;
   bool _providersInitialized = false;
 
   @override
@@ -168,7 +168,7 @@ class _AppLifecycleManagerState extends State<AppLifecycleManager>
     if (!_providersInitialized) {
       _ConnectivityProvider =
           Provider.of<ConnectivityProvider>(context, listen: false);
-      _authProvider = Provider.of<AuthProvider>(context, listen: false);
+      _authProvider = Provider.of<AuthBloc>(context, listen: false);
       _providersInitialized = true;
     }
   }

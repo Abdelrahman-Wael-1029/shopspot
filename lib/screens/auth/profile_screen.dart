@@ -1,10 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:shopspot/providers/auth_state.dart';
 import '../../models/user_model.dart';
-import '../../providers/auth_provider.dart';
+import '../../providers/auth_bloc.dart';
 import '../../providers/connectivity_provider.dart';
 import '../../utils/validator.dart';
 import '../../widgets/custom_button.dart';
@@ -54,7 +56,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadUserProfile() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthBloc>(context, listen: false);
     final connectivityProvider =
         Provider.of<ConnectivityProvider>(context, listen: false);
 
@@ -63,14 +65,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         connectivityProvider.isOnline && connectivityProvider.shouldRefresh;
 
     // Display current cached data immediately if available
-    _updateUIWithUserData(authProvider.user);
+    _updateUIWithUserData(authProvider.currentUser);
 
     if (shouldLoadFromServer) {
       // Load from server
       await authProvider.getProfile(context);
 
       // Update UI with fresh data
-      _updateUIWithUserData(authProvider.user);
+      _updateUIWithUserData(authProvider.currentUser);
 
       // Mark as refreshed
       connectivityProvider.markRefreshed();
@@ -206,9 +208,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _updateProfile() async {
     if (!_validateInputs()) return;
 
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthBloc>(context, listen: false);
 
-    final success = await authProvider.updateProfile(
+    await authProvider.updateProfile(
       name: _nameController.text,
       gender: _gender,
       level: _level,
@@ -219,29 +221,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           : _confirmPasswordController.text,
       profilePhoto: _profileImage,
     );
-
-    if (success) {
-      Fluttertoast.showToast(
-        msg: "Profile updated successfully",
-        backgroundColor: Colors.green,
-      );
-
-      setState(() {
-        _isEditing = false;
-        _passwordController.clear();
-        _confirmPasswordController.clear();
-      });
-    } else {
-      Fluttertoast.showToast(
-        msg: authProvider.error ?? "Something went wrong. Please try again.",
-        backgroundColor: Colors.orange,
-      );
-    }
   }
 
   Future<void> _logout() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    await authProvider.logout(context);
+    final authProvider = Provider.of<AuthBloc>(context, listen: false);
+    await authProvider.logout();
 
     if (mounted) {
       Navigator.pushReplacementNamed(context, '/login');
@@ -273,8 +257,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final user = authProvider.user;
+    final authProvider = Provider.of<AuthBloc>(context);
+    final user = authProvider.currentUser;
 
     if (user == null) {
       return const Scaffold(
@@ -328,9 +312,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
-      body: authProvider.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
+      body: BlocConsumer(builder:(context, state) {
+        if(state is ProfileLoading){
+          return const Center(child: CircularProgressIndicator());
+        }
+        return SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: Column(
@@ -348,7 +334,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
               ),
-            ),
+            );
+      }, listener:(context, state) {},)
     );
   }
 
@@ -518,11 +505,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(height: 20),
 
         // Update button
-        CustomButton(
-          text: 'Update Profile',
-          onPressed: _updateProfile,
-          isLoading: Provider.of<AuthProvider>(context).isLoading,
-        ),
+        BlocConsumer(builder: (context, state){
+          if (state is ProfileLoading) {
+            return LinearProgressIndicator();
+          }
+          return CustomButton(
+            text: 'Update Profile',
+            onPressed: _updateProfile,
+          );
+        }, 
+        listener: (context, state) {
+          if (state is ProfileLoading) {
+            
+          }
+          if(state is ProfileSuccess){
+            Fluttertoast.showToast(
+            msg: "Profile updated successfully",
+            backgroundColor: Colors.green,
+          );
+
+          setState(() {
+            _isEditing = false;
+            _passwordController.clear();
+            _confirmPasswordController.clear();
+          });
+          }
+          if(state is ProfileFailure){
+            Fluttertoast.showToast(
+            msg: state.message,
+            backgroundColor: Colors.orange,
+            );
+          }
+        },),
       ],
     );
   }
