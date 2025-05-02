@@ -4,6 +4,8 @@ import '../services/api_service.dart';
 
 class RestaurantProvider with ChangeNotifier {
   List<Restaurant> _restaurants = [];
+  List<Restaurant> _allRestaurants = [];
+
   bool _isLoading = false;
   String? _error;
 
@@ -18,9 +20,10 @@ class RestaurantProvider with ChangeNotifier {
 
     try {
       final result = await ApiService.getRestaurants();
-      
+
       if (result['success']) {
-        _restaurants = result['restaurants'];
+        _allRestaurants = result['restaurants'];
+        _restaurants = _allRestaurants;
         _isLoading = false;
         notifyListeners();
       } else {
@@ -35,11 +38,18 @@ class RestaurantProvider with ChangeNotifier {
     }
   }
 
+  void search(String query) {
+    _restaurants = _allRestaurants
+        .where((r) => r.name.toLowerCase().contains(query.toLowerCase()))
+        .toList();
+    notifyListeners();
+  }
+
   Future<List<Restaurant>> getRestaurantsForProduct(int productId) async {
     try {
       final result = await ApiService.getProductRestaurants(productId);
       print(result);
-      
+
       if (result['success']) {
         return result['restaurants'];
       } else {
@@ -53,4 +63,9 @@ class RestaurantProvider with ChangeNotifier {
       return [];
     }
   }
-} 
+
+  void clearSearch() {
+    _restaurants = _allRestaurants;
+    notifyListeners();
+  }
+}

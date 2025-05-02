@@ -287,7 +287,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
-        centerTitle: true,
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
@@ -530,6 +529,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildGenderSelection() {
     return Card(
+      color: Colors.transparent,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10.0),
@@ -540,12 +540,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Gender',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.labelLarge!.copyWith(
+                    fontSize: 16,
+                  ),
             ),
             const SizedBox(height: 10),
             Row(

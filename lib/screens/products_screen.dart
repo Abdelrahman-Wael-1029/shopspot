@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shopspot/models/restaurant.dart';
+import 'package:shopspot/utils/app_colors.dart';
 import '../providers/product_provider.dart';
 import '../models/product.dart';
 import 'product_details_screen.dart';
 
 class ProductsScreen extends StatefulWidget {
-  final int restaurantId;
-  final String restaurantName;
+  final Restaurant restaurant;
 
   const ProductsScreen({
     super.key,
-    required this.restaurantId,
-    required this.restaurantName,
+    required this.restaurant,
   });
 
   @override
@@ -26,7 +26,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.microtask(() =>
           Provider.of<ProductProvider>(context, listen: false)
-              .fetchProductsForRestaurant(widget.restaurantId));
+              .fetchProductsForRestaurant(widget.restaurant.id));
     });
   }
 
@@ -34,7 +34,13 @@ class _ProductsScreenState extends State<ProductsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Products - ${widget.restaurantName}'),
+        title: Text(
+          'Products - ${widget.restaurant.name}',
+          style: Theme.of(context).textTheme.titleLarge!.copyWith(
+                color: AppColors.white,
+                fontSize: 18,
+              ),
+        ),
       ),
       body: Consumer<ProductProvider>(
         builder: (ctx, productProvider, child) {
@@ -68,10 +74,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
             itemBuilder: (ctx, i) {
               Product product = productProvider.products[i];
               return ProductCard(
-                product: product,
-                restaurantId: widget.restaurantId,
-                restaurantName: widget.restaurantName,
-              );
+                  product: product, restaurant: widget.restaurant);
             },
           );
         },
@@ -82,14 +85,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
 class ProductCard extends StatelessWidget {
   final Product product;
-  final int restaurantId;
-  final String restaurantName;
+  final Restaurant restaurant;
 
   const ProductCard({
     super.key,
     required this.product,
-    required this.restaurantId,
-    required this.restaurantName,
+    required this.restaurant,
   });
 
   @override
@@ -103,7 +104,7 @@ class ProductCard extends StatelessWidget {
             MaterialPageRoute(
               builder: (context) => ProductDetailsScreen(
                 product: product,
-                restaurantId: restaurantId,
+                restaurant: restaurant,
               ),
             ),
           );

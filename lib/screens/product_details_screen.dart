@@ -3,19 +3,18 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:shopspot/providers/location_provider.dart';
-import '../providers/restaurant_provider.dart';
+import 'package:shopspot/utils/app_colors.dart';
+import '../providers/location_provider.dart';
 import '../models/product.dart';
 import '../models/restaurant.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
-  final int restaurantId;
+  final Restaurant? restaurant;
   final Product product;
 
   const ProductDetailsScreen({
     super.key,
-    required this.restaurantId,
+    this.restaurant,
     required this.product,
   });
 
@@ -24,169 +23,127 @@ class ProductDetailsScreen extends StatefulWidget {
 }
 
 class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
-  Restaurant? _restaurant;
-  Position? _currentPosition;
-  String? _error;
-
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadRestaurantAndLocation());
-  }
-
-  Future<void> _loadRestaurantAndLocation() async {
-    try {
-      // Get restaurant details
-      final restaurants =
-          await Provider.of<RestaurantProvider>(context, listen: false)
-              .getRestaurantsForProduct(widget.product.id);
-
-      final restaurant =
-          restaurants.firstWhere((r) => r.id == widget.restaurantId);
-      setState(() {
-        _restaurant = restaurant;
-      });
-
-      // Get current location
-      await _getCurrentLocation();
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-      });
-    }
-  }
-
-  Future<void> _getCurrentLocation() async {
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        throw Exception('Location services are disabled.');
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          throw Exception('Location permissions are denied.');
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        throw Exception('Location permissions are permanently denied.');
-      }
-
-      Position position = await Geolocator.getCurrentPosition();
-      setState(() {
-        _currentPosition = position;
-      });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-      });
-    }
-  }
-
-  double _calculateDistance() {
-    if (_currentPosition == null || _restaurant == null) return 0;
-
-    return Geolocator.distanceBetween(
-          _currentPosition!.latitude,
-          _currentPosition!.longitude,
-          _restaurant!.latitude,
-          _restaurant!.longitude,
-        ) /
-        1000; // Convert to km
-  }
-
-  Future<void> _openMaps(context) async {
-    if (_restaurant == null) return;
-    var locationProvider =
-        Provider.of<LocationProvider>(context, listen: false);
-    locationProvider.openGoogleMapWithDestination(
-        _restaurant!.latitude, _restaurant!.longitude);
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final locationProvider = Provider.of<LocationProvider>(context);
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Product Details'),
+        // make linear loading in bottom
+        bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(4.0),
+            child: (locationProvider.loading)
+                ? LinearProgressIndicator()
+                : SizedBox.shrink()),
       ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CachedNetworkImage(
-                  imageUrl: widget.product.imageUrl,
-                  height: 200,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(
-                    height: 200,
-                    color: Colors.grey[300],
-                    child: const Center(child: CircularProgressIndicator()),
-                  ),
-                  errorWidget: (context, url, error) => Container(
-                    height: 200,
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.fastfood, size: 60),
+            // Product Image
+            CachedNetworkImage(
+              imageUrl: widget.product.imageUrl,
+              height: 200,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Container(
+                height: 200,
+                color: AppColors.lightGrey,
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.primary,
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.product.name,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        widget.product.description,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[700],
-                        ),
-                      ),
-                    ],
-                  ),
+              ),
+              errorWidget: (context, url, error) => Container(
+                height: 200,
+                color: AppColors.lightGrey,
+                child: Icon(
+                  Icons.fastfood,
+                  size: 60,
+                  color: AppColors.grey,
                 ),
-              ],
+              ),
             ),
-            if (_restaurant != null) ...[
-              const Divider(thickness: 1),
+
+            // Product Details
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.product.name,
+                    style: theme.textTheme.headlineLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.product.description,
+                    style: theme.textTheme.bodyLarge,
+                  ),
+                ],
+              ),
+            ),
+
+            // Restaurant Information
+            if (widget.restaurant != null) ...[
+              Divider(
+                thickness: 1,
+                color: AppColors.border,
+              ),
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Restaurant Information',
-                      style: TextStyle(
+                      style: theme.textTheme.headlineLarge?.copyWith(
                         fontSize: 18,
-                        fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 16),
+
+                    // Restaurant Name & Location
                     ListTile(
-                      leading: Icon(Icons.restaurant),
-                      title: Text(_restaurant!.name),
-                      subtitle: Text(_restaurant!.location),
+                      leading: Icon(
+                        Icons.restaurant,
+                        color: AppColors.primary,
+                      ),
+                      title: Text(
+                        widget.restaurant!.name,
+                        style: theme.textTheme.bodyLarge,
+                      ),
+                      subtitle: Text(
+                        widget.restaurant!.location,
+                        style: theme.textTheme.bodyMedium,
+                      ),
                     ),
-                    if (_currentPosition != null)
+
+                    // Distance
+                    if (locationProvider.hasLocation)
                       ListTile(
-                        leading: Icon(Icons.location_on),
+                        leading: Icon(
+                          Icons.location_on,
+                          color: AppColors.secondary,
+                        ),
                         title: Text(
-                          'Distance: ${_calculateDistance().toStringAsFixed(2)} km',
+                          'Distance: ${locationProvider.calculateDistance(
+                                widget.restaurant!.latitude,
+                                widget.restaurant!.longitude,
+                              ).toStringAsFixed(2)} km',
+                          style: theme.textTheme.bodyLarge,
                         ),
                       ),
+
+                    // Get Directions Button
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
@@ -194,15 +151,50 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                         icon: const Icon(Icons.directions),
                         label: const Text('Get Directions'),
                         onPressed: () {
-                          _openMaps(context);
+                          locationProvider.openGoogleMapWithDestination(
+                            widget.restaurant!.latitude,
+                            widget.restaurant!.longitude,
+                          );
                         },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: AppColors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                       ),
                     ),
+                    // refresh location if not have permission or location
+                    if (!locationProvider.hasLocation ||
+                        !locationProvider.hasPermission)
+                      const SizedBox(height: 16),
+                    if (!locationProvider.hasLocation ||
+                        !locationProvider.hasPermission)
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.location_on),
+                          label: const Text('Refresh Location'),
+                          onPressed: locationProvider.refreshLocation,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.warning,
+                            foregroundColor: AppColors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    // Map
                     const SizedBox(height: 16),
                     Container(
                       height: 200,
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey),
+                        border: Border.all(color: AppColors.border),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: ClipRRect(
@@ -210,28 +202,28 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                         child: FlutterMap(
                           options: MapOptions(
                             initialCenter: LatLng(
-                              _restaurant!.latitude,
-                              _restaurant!.longitude,
+                              widget.restaurant!.latitude,
+                              widget.restaurant!.longitude,
                             ),
                             initialZoom: 15,
                             interactionOptions: const InteractionOptions(
                               enableScrollWheel: false,
                             ),
-                            // No direct equivalent for mapToolbarEnabled, zoomControlsEnabled
                           ),
                           children: [
                             TileLayer(
                               urlTemplate:
                                   'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                              // subdomains: const ['a', 'b', 'c'],
                               userAgentPackageName: 'com.example.shopspot',
                             ),
+
+                            // Restaurant Marker
                             MarkerLayer(
                               markers: [
                                 Marker(
                                   point: LatLng(
-                                    _restaurant!.latitude,
-                                    _restaurant!.longitude,
+                                    widget.restaurant!.latitude,
+                                    widget.restaurant!.longitude,
                                   ),
                                   width: 40,
                                   height: 40,
@@ -240,40 +232,63 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                                       showDialog(
                                         context: context,
                                         builder: (context) => AlertDialog(
-                                          title: Text(_restaurant!.name),
-                                          content: Text(_restaurant!.location),
+                                          title: Text(
+                                            widget.restaurant!.name,
+                                            style: theme.textTheme.headlineLarge
+                                                ?.copyWith(
+                                              fontSize: 18,
+                                            ),
+                                          ),
+                                          content: Text(
+                                            widget.restaurant!.location,
+                                            style: theme.textTheme.bodyMedium,
+                                          ),
                                           actions: [
                                             TextButton(
                                               onPressed: () =>
                                                   Navigator.pop(context),
-                                              child: const Text('Close'),
+                                              child: Text(
+                                                'Close',
+                                                style: TextStyle(
+                                                  color: AppColors.primary,
+                                                ),
+                                              ),
                                             ),
                                           ],
+                                          backgroundColor: AppColors.card,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
                                         ),
                                       );
                                     },
-                                    child: const Icon(
+                                    child: Icon(
                                       Icons.location_on,
-                                      color: Colors.red,
+                                      color: AppColors.error,
                                       size: 30,
                                     ),
                                   ),
                                 ),
                               ],
                             ),
-                            if (_currentPosition != null)
+
+                            // Current Location Marker
+                            if (locationProvider.hasLocation)
                               MarkerLayer(
                                 markers: [
                                   Marker(
                                     point: LatLng(
-                                      _currentPosition!.latitude,
-                                      _currentPosition!.longitude,
+                                      locationProvider
+                                          .currentLocation!.latitude,
+                                      locationProvider
+                                          .currentLocation!.longitude,
                                     ),
                                     width: 40,
                                     height: 40,
-                                    child: const Icon(
+                                    child: Icon(
                                       Icons.my_location,
-                                      color: Colors.blue,
+                                      color: AppColors.primary,
                                       size: 20,
                                     ),
                                   ),
@@ -287,12 +302,14 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 ),
               ),
             ],
-            if (_error != null)
+
+            // Error Message
+            if (locationProvider.error != null)
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Text(
-                  _error!,
-                  style: const TextStyle(color: Colors.red),
+                  locationProvider.error!,
+                  style: TextStyle(color: AppColors.error),
                 ),
               ),
           ],

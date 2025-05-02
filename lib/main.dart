@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shopspot/providers/product_provider.dart';
 import 'package:shopspot/providers/restaurant_provider.dart';
-import 'package:shopspot/services/location_service.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:shopspot/utils/app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/location_provider.dart';
 import 'providers/index_provider.dart';
@@ -44,19 +44,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Restaurant App',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.transparent,
-        ),
-        scaffoldBackgroundColor: Colors.white,
-        bottomAppBarTheme: const BottomAppBarTheme(
-          color: Colors.white,
-          surfaceTintColor: Colors.transparent,
-        ),
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.system,
       onGenerateRoute: AppRoutes.generateRoute,
       home: const InitScreen(),
     );
@@ -84,6 +74,8 @@ class _InitScreenState extends State<InitScreen> {
   Future<void> _initializeAndNavigate() async {
     if (!mounted) return;
 
+    
+
     // Check authentication status
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final isAuthenticated = authProvider.checkCachedAuthentication();
@@ -96,9 +88,8 @@ class _InitScreenState extends State<InitScreen> {
     // Wait a brief moment to ensure proper initialization
     await Future.delayed(const Duration(milliseconds: 500));
 
-    // Request location permission
-    await LocationService.checkLocationPermission(request: true);
-
+    final locationProvider = Provider.of<LocationProvider>(context, listen: false);
+    await locationProvider.initLocation();
     // Remove splash screen
     FlutterNativeSplash.remove();
 

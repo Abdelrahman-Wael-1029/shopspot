@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shopspot/models/product.dart';
+import 'package:shopspot/models/restaurant.dart';
 import 'package:shopspot/screens/auth/login_screen.dart';
 import 'package:shopspot/screens/auth/signup_screen.dart';
 import '../screens/restaurants_screen.dart';
@@ -31,15 +32,14 @@ class AppRoutes {
         );
       case restaurants:
         return MaterialPageRoute(
-          builder: (_) => const RestaurantsScreen(),
+          builder: (_) =>  RestaurantsScreen(),
         );
 
       case products:
         final args = settings.arguments as Map<String, dynamic>;
         return MaterialPageRoute(
           builder: (_) => ProductsScreen(
-            restaurantId: args['restaurantId'] as int,
-            restaurantName: args['restaurantName'] as String,
+            restaurant: args['restaurant'] as Restaurant,
           ),
         );
 
@@ -48,7 +48,7 @@ class AppRoutes {
         return MaterialPageRoute(
           builder: (_) => ProductDetailsScreen(
             product: args['product'] as Product,
-            restaurantId: args['restaurantId'] as int,
+            restaurant: args['restaurant'] as Restaurant,
           ),
         );
 
@@ -88,51 +88,5 @@ class AppRoutes {
           ),
         );
     }
-  }
-
-  // Navigation helper methods
-  static void navigateToProducts(
-    BuildContext context, {
-    required int restaurantId,
-    required String restaurantName,
-  }) {
-    Navigator.pushNamed(
-      context,
-      products,
-      arguments: {
-        'restaurantId': restaurantId,
-        'restaurantName': restaurantName,
-      },
-    );
-  }
-
-  static void navigateToProductDetails(
-    BuildContext context, {
-    required int productId,
-    required int restaurantId,
-  }) {
-    Navigator.pushNamed(
-      context,
-      productDetails,
-      arguments: {
-        'productId': productId,
-        'restaurantId': restaurantId,
-      },
-    );
-  }
-
-  static void navigateToRestaurantMap(
-    BuildContext context, {
-    required List<dynamic> restaurants,
-    required String productName,
-  }) {
-    Navigator.pushNamed(
-      context,
-      restaurantMap,
-      arguments: {
-        'restaurants': restaurants,
-        'productName': productName,
-      },
-    );
   }
 }

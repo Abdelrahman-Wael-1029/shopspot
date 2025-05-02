@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shopspot/providers/product_provider.dart';
 import 'package:shopspot/providers/restaurant_provider.dart';
 import 'package:shopspot/screens/auth/profile_screen.dart';
 import '../providers/index_provider.dart';
@@ -17,9 +18,14 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    
     Future.microtask(() =>
         Provider.of<RestaurantProvider>(context, listen: false)
             .fetchRestaurants());
+    
+    Future.microtask(() =>
+        Provider.of<ProductProvider>(context, listen: false)
+            .fetchProducts());
           
   }
 
@@ -30,17 +36,15 @@ class _HomeScreenState extends State<HomeScreen> {
         return Scaffold(
           body: IndexedStack(
             index: indexProvider.currentIndex,
-            children: const [
+            children: [
               RestaurantsScreen(),
-              SearchScreen(),
-              ProfileScreen(),
+              const SearchScreen(),
+              const ProfileScreen(),
             ],
           ),
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: indexProvider.currentIndex,
             onTap: (index) => indexProvider.changeIndex(index),
-            selectedItemColor: Theme.of(context).primaryColor,
-            unselectedItemColor: Colors.grey,
             items: const [
               BottomNavigationBarItem(
                 icon: Icon(Icons.restaurant),

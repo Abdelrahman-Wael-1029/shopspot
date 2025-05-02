@@ -695,59 +695,6 @@ class ApiService {
     }
   }
 
-  // Search products by name
-  static Future<Map<String, dynamic>> searchProducts(String query) async {
-    final requestId =
-        'search-products-${DateTime.now().millisecondsSinceEpoch}';
-    final client = _getClient(requestId);
-
-    try {
-      final response = await client
-          .get(
-            Uri.parse('$baseUrl/products/search?query=$query'),
-            headers: await _getHeaders(authorized: true),
-          )
-          .timeout(const Duration(seconds: 5));
-
-      final responseData = jsonDecode(response.body);
-
-      // Cleanup the client
-      client.close();
-      _removeClient(requestId);
-
-      if (response.statusCode == 200) {
-        final List<Product> products = List<Product>.from(
-            responseData.map((item) => Product.fromJson(item)).toList());
-
-        return {
-          'success': true,
-          'products': products,
-        };
-      } else {
-        return {
-          'success': false,
-          'message': responseData['message'],
-        };
-      }
-    } on TimeoutException {
-      timeoutHandling();
-
-      return {
-        'success': false,
-        'message': 'Connection timed out. Please try again later.',
-      };
-    } catch (e) {
-      // Cleanup the client
-      client.close();
-      _removeClient(requestId);
-
-      return {
-        'success': false,
-        'message': 'Network connection issue. Please try again later.',
-      };
-    }
-  }
-
   // Get restaurants that sell a specific product
   static Future<Map<String, dynamic>> getProductRestaurants(
       int productId) async {
@@ -762,7 +709,7 @@ class ApiService {
             headers: await _getHeaders(authorized: true),
           )
           .timeout(const Duration(seconds: 5));
-      
+
       final responseData = jsonDecode(response.body);
       // Cleanup the client
       client.close();
@@ -775,59 +722,6 @@ class ApiService {
         return {
           'success': true,
           'restaurants': restaurants,
-        };
-      } else {
-        return {
-          'success': false,
-          'message': responseData['message'],
-        };
-      }
-    } on TimeoutException {
-      timeoutHandling();
-
-      return {
-        'success': false,
-        'message': 'Connection timed out. Please try again later.',
-      };
-    } catch (e) {
-      // Cleanup the client
-      client.close();
-      _removeClient(requestId);
-
-      return {
-        'success': false,
-        'message': 'Network connection issue. Please try again later.',
-      };
-    }
-  }
-
-  // Get product details for a specific restaurant
-  static Future<Map<String, dynamic>> getProductDetailsForRestaurant(
-      int restaurantId, int productId) async {
-    final requestId =
-        'product-details-$restaurantId-$productId-${DateTime.now().millisecondsSinceEpoch}';
-    final client = _getClient(requestId);
-
-    try {
-      final response = await client
-          .get(
-            Uri.parse('$baseUrl/restaurants/$restaurantId/products/$productId'),
-            headers: await _getHeaders(authorized: true),
-          )
-          .timeout(const Duration(seconds: 5));
-
-      final responseData = jsonDecode(response.body);
-
-      // Cleanup the client
-      client.close();
-      _removeClient(requestId);
-
-      if (response.statusCode == 200) {
-        final product = Product.fromJson(responseData);
-
-        return {
-          'success': true,
-          'product': product,
         };
       } else {
         return {
