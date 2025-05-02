@@ -8,10 +8,12 @@ class RestaurantProvider with ChangeNotifier {
 
   bool _isLoading = false;
   String? _error;
+  String? _errorProducts;
 
   List<Restaurant> get restaurants => _restaurants;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  String? get errorProducts => _errorProducts;
 
   Future<void> fetchRestaurants() async {
     _isLoading = true;
@@ -48,17 +50,15 @@ class RestaurantProvider with ChangeNotifier {
   Future<List<Restaurant>> getRestaurantsForProduct(int productId) async {
     try {
       final result = await ApiService.getProductRestaurants(productId);
-      print(result);
 
       if (result['success']) {
         return result['restaurants'];
       } else {
-        _error = result['message'];
+        _errorProducts = result['message'];
         notifyListeners();
         return [];
       }
     } catch (e) {
-      _error = e.toString();
       notifyListeners();
       return [];
     }

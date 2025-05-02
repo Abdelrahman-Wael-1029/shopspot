@@ -708,7 +708,7 @@ class ApiService {
             Uri.parse('$baseUrl/products/$productId/restaurants'),
             headers: await _getHeaders(authorized: true),
           )
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 20));
 
       final responseData = jsonDecode(response.body);
       // Cleanup the client

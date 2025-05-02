@@ -36,15 +36,15 @@ class _SearchScreenState extends State<SearchScreen> {
       appBar: AppBar(
         title: const Text('Search Products'),
       ),
-      body: SingleChildScrollView(
-        child: RefreshIndicator(
-          onRefresh: () async {
-            await context.read<ProductProvider>().fetchProducts();
-          },
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await context.read<ProductProvider>().fetchProducts();
+        },
+        child: SingleChildScrollView(
           child: Consumer<ProductProvider>(
             builder: (ctx, productProvider, child) {
               if (productProvider.isLoading) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: LinearProgressIndicator());
               }
 
               if (productProvider.error != null) {
