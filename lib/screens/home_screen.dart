@@ -18,15 +18,13 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    
-    Future.microtask(() =>
-        Provider.of<RestaurantProvider>(context, listen: false)
-            .fetchRestaurants(context));
-    
-    Future.microtask(() =>
-        Provider.of<ProductProvider>(context, listen: false)
-            .fetchProducts(context));
-          
+
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      Provider.of<RestaurantProvider>(context, listen: false)
+          .fetchRestaurants(context);
+      Provider.of<ProductProvider>(context, listen: false)
+          .fetchProducts(context);
+    });
   }
 
   @override

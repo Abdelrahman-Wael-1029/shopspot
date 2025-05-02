@@ -14,6 +14,9 @@ class RestaurantProvider with ChangeNotifier {
   // Cache for product-restaurant relationships
   Map<int, List<Restaurant>> _productRestaurantsCache = {};
 
+  // Track which products are currently loading
+  Map<int, bool> _loadingProductRestaurants = {};
+
   bool _isLoading = false;
   String? _errorProducts;
   bool _isCacheInitialized = false;
@@ -96,6 +99,41 @@ class RestaurantProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  // New method to check if restaurants are being loaded for a specific product
+  bool isLoadingProductRestaurants(int productId) {
+    return _loadingProductRestaurants[productId] ?? false;
+  }
+
+  // New method to get already loaded restaurants without triggering a new load
+  List<Restaurant>? getLoadedRestaurantsForProduct(int productId) {
+    return _productRestaurantsCache[productId];
+  }
+
+  // New method to trigger loading restaurants for a product
+  void loadRestaurantsForProduct(BuildContext context, int productId) {
+    // Check if we have already loaded this product's restaurants
+    if (_productRestaurantsCache.containsKey(productId)) {
+      debugPrint('Already have restaurants for product $productId');
+      return;
+    }
+
+    // Check if we're already loading restaurants for this product
+    if (_loadingProductRestaurants[productId] == true) {
+      debugPrint('Already loading restaurants for product $productId');
+      return;
+    }
+
+    // Start loading restaurants
+    _loadingProductRestaurants[productId] = true;
+    notifyListeners();
+
+    getRestaurantsForProduct(context, productId).then((_) {
+      _loadingProductRestaurants[productId] = false;
+      notifyListeners();
+    });
+  }
+
+  // Original method kept for compatibility
   Future<List<Restaurant>> getRestaurantsForProduct(
       BuildContext context, int productId) async {
     if (!_isCacheInitialized) {
@@ -115,8 +153,6 @@ class RestaurantProvider with ChangeNotifier {
     }
 
     debugPrint('Fetching restaurants for product $productId from API');
-    _isLoading = true;
-    notifyListeners();
 
     try {
       final result = await ApiService.getProductRestaurants(productId);
@@ -130,17 +166,17 @@ class RestaurantProvider with ChangeNotifier {
             _productRestaurantsCache);
         // Mark as refreshed
         connectivityProvider.markRefreshed();
+        notifyListeners();
         return restaurants;
       } else {
         _errorProducts = result['message'];
+        notifyListeners();
         return [];
       }
     } catch (e) {
       _errorProducts = e.toString();
-      return [];
-    } finally {
-      _isLoading = false;
       notifyListeners();
+      return [];
     }
   }
 
@@ -152,6 +188,7 @@ class RestaurantProvider with ChangeNotifier {
   // Method to clear the restaurant-product cache
   Future<void> clearProductRestaurantsCache() async {
     _productRestaurantsCache.clear();
+    _loadingProductRestaurants.clear();
     await DatabaseService.clearProductRestaurantCache();
     notifyListeners();
     debugPrint('Product-Restaurant cache cleared');

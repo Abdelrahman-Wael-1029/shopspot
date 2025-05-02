@@ -24,9 +24,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.microtask(() =>
-          Provider.of<ProductProvider>(context, listen: false)
-              .fetchProductsForRestaurant(widget.restaurant.id));
+      Provider.of<ProductProvider>(context, listen: false)
+          .fetchProductsForRestaurant(context, widget.restaurant.id);
     });
   }
 
@@ -46,21 +45,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
         builder: (ctx, productProvider, child) {
           if (productProvider.isLoading) {
             return const Center(child: CircularProgressIndicator());
-          }
-
-          if (productProvider.errorRestaurant != null) {
-            return Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Center(
-                child: Text(
-                  'An error occurred: ${productProvider.errorRestaurant}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.error,
-                      ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            );
           }
 
           if (productProvider.products.isEmpty) {

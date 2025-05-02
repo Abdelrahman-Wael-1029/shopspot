@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:provider/provider.dart';
 import 'package:shopspot/providers/connectivity_provider.dart';
@@ -12,12 +13,10 @@ class ProductProvider with ChangeNotifier {
   List<Product> _allProducts = [];
   List<Product> _searchResults = [];
   bool _isLoading = false;
-  String? _errorRestaurant;
 
   List<Product> get products => _products;
   List<Product> get searchResults => _searchResults;
   bool get isLoading => _isLoading;
-  String? get errorRestaurant => _errorRestaurant;
 
   Future<void> fetchProducts(context) async {
     _isLoading = true;
@@ -71,26 +70,54 @@ class ProductProvider with ChangeNotifier {
     }
   }
 
-  Future<void> fetchProductsForRestaurant(int restaurantId) async {
+  Future<void> fetchProductsForRestaurant(
+      BuildContext context, int restaurantId) async {
     _isLoading = true;
-    _errorRestaurant = null;
     notifyListeners();
-
     try {
+      final connectivityProvider =
+          Provider.of<ConnectivityProvider>(context, listen: false);
+      final shouldLoadFromServer =
+          connectivityProvider.isOnline && connectivityProvider.shouldRefresh;
+
+      // Load from cache
+      _products =
+          await DatabaseService.getCachedProductsForRestaurant(restaurantId);
+
+      if (!shouldLoadFromServer) {
+        debugPrint('load products from cache for restaurant $restaurantId');
+        if (!connectivityProvider.isOnline) {
+          // Show toast if we're offline
+          Fluttertoast.showToast(
+            msg: "You are offline. Showing cached Restaurants data.",
+            backgroundColor: AppColors.error,
+          );
+        }
+        await Future.delayed(const Duration(microseconds: 500));
+        if (_products.isNotEmpty) return;
+      }
       final result = await ApiService.getRestaurantProducts(restaurantId);
       if (result['success']) {
         _products = result['products'];
-        _isLoading = false;
-        notifyListeners();
+
+        // Cache data
+        await DatabaseService.cacheProductsForRestaurant(
+            restaurantId, _products);
+
+        // Mark as refreshed
+        connectivityProvider.markRefreshed();
       } else {
-        _isLoading = false;
-        _errorRestaurant = result['message'];
-        notifyListeners();
+        throw Exception(result['message']);
       }
     } catch (e) {
+      debugPrint(e.toString());
+
+      Fluttertoast.showToast(
+        msg: "Unable to connect to server. Showing cached data.",
+        backgroundColor: AppColors.error,
+      );
+    } finally {
       _isLoading = false;
-      _errorRestaurant =
-          'Unable to connect to the server. Please try again later.';
       notifyListeners();
     }
   }

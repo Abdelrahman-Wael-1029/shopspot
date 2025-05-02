@@ -105,141 +105,136 @@ class SearchResultItem extends StatelessWidget {
       elevation: 3,
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ExpansionTile(
-        leading: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: CachedNetworkImage(
-            imageUrl: product.imageUrl,
-            width: 60,
-            height: 60,
-            fit: BoxFit.cover,
-            placeholder: (context, url) => Container(
-              width: 60,
-              height: 60,
-              color: Colors.grey[300],
-              child: const Center(child: CircularProgressIndicator()),
-            ),
-            errorWidget: (context, url, error) => Container(
-              width: 60,
-              height: 60,
-              color: Colors.grey[300],
-              child: const Icon(Icons.fastfood, size: 30),
-            ),
-          ),
-        ),
-        title: Text(
-          product.name,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        subtitle: Text(
-          product.description.length > 50
-              ? '${product.description.substring(0, 50)}...'
-              : product.description,
-          style: const TextStyle(fontSize: 14),
-        ),
-        children: [
-          FutureBuilder<List<Restaurant>>(
-            future: _getRestaurantsForProduct(context, product.id),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Center(child: CircularProgressIndicator()),
-                );
+      child: Consumer<RestaurantProvider>(
+        builder: (context, restaurantProvider, _) {
+          return ExpansionTile(
+            onExpansionChanged: (expanded) {
+              if (expanded) {
+                // Only fetch restaurants when the tile is expanded
+                restaurantProvider.loadRestaurantsForProduct(context, product.id);
               }
-
-              if (snapshot.hasError) {
-                return Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text('Failed to load restaurants: ${snapshot.error}'),
-                );
-              }
-
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text('No restaurants found for this product'),
-                );
-              }
-
-              List<Restaurant> restaurants = snapshot.data!;
-
-              return Column(
-                children: [
-                  Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Available at ${restaurants.length} ${restaurants.length == 1 ? 'restaurant' : 'restaurants'}',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.map),
-                          label: const Text('Show on Map'),
-                          style: ElevatedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                          ),
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => RestaurantMapScreen(
-                                  restaurants: restaurants,
-                                  productName: product.name,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: restaurants.length,
-                    itemBuilder: (ctx, i) {
-                      Restaurant restaurant = restaurants[i];
-                      return ListTile(
-                        leading: const Icon(Icons.restaurant),
-                        title: Text(restaurant.name),
-                        subtitle: Text(restaurant.location,
-                            maxLines: 1, overflow: TextOverflow.ellipsis),
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => ProductDetailsScreen(
-                                product: product,
-                                restaurant: restaurant,
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ],
-              );
             },
-          ),
-        ],
+            leading: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: CachedNetworkImage(
+                imageUrl: product.imageUrl,
+                width: 60,
+                height: 60,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(
+                  width: 60,
+                  height: 60,
+                  color: Colors.grey[300],
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+                errorWidget: (context, url, error) => Container(
+                  width: 60,
+                  height: 60,
+                  color: Colors.grey[300],
+                  child: const Icon(Icons.fastfood, size: 30),
+                ),
+              ),
+            ),
+            title: Text(
+              product.name,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            subtitle: Text(
+              product.description.length > 50
+                  ? '${product.description.substring(0, 50)}...'
+                  : product.description,
+              style: const TextStyle(fontSize: 14),
+            ),
+            children: [
+              restaurantProvider.isLoadingProductRestaurants(product.id)
+                  ? const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  : Builder(
+                      builder: (context) {
+                        final restaurants = restaurantProvider.getLoadedRestaurantsForProduct(product.id);
+                        
+                        if (restaurants == null) {
+                          return const SizedBox.shrink(); // Not loaded yet
+                        }
+                        
+                        if (restaurants.isEmpty) {
+                          return const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text('No restaurants found for this product'),
+                          );
+                        }
+
+                        return Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      'Available at ${restaurants.length} ${restaurants.length == 1 ? 'restaurant' : 'restaurants'}',
+                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                  ElevatedButton.icon(
+                                    icon: const Icon(Icons.map),
+                                    label: const Text('Show on Map'),
+                                    style: ElevatedButton.styleFrom(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                    ),
+                                    onPressed: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) => RestaurantMapScreen(
+                                            restaurants: restaurants,
+                                            productName: product.name,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: restaurants.length,
+                              itemBuilder: (ctx, i) {
+                                Restaurant restaurant = restaurants[i];
+                                return ListTile(
+                                  leading: const Icon(Icons.restaurant),
+                                  title: Text(restaurant.name),
+                                  subtitle: Text(restaurant.location,
+                                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => ProductDetailsScreen(
+                                          product: product,
+                                          restaurant: restaurant,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+            ],
+          );
+        },
       ),
     );
-  }
-
-  // Helper method to get restaurants using the provider's cache
-  Future<List<Restaurant>> _getRestaurantsForProduct(
-      BuildContext context, int productId) async {
-    // Use the provider's caching mechanism
-    return Provider.of<RestaurantProvider>(context, listen: false)
-        .getRestaurantsForProduct(context, productId);
   }
 }

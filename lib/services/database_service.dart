@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shopspot/models/product.dart';
 import 'package:shopspot/models/product_restaurant_cache.dart';
 import 'package:shopspot/models/restaurant.dart';
+import 'package:shopspot/models/restaurant_product_cache.dart';
 import '../models/user_model.dart';
 
 class DatabaseService {
@@ -18,6 +19,7 @@ class DatabaseService {
       'product_restaurant_cache_box';
   static const String _productRestaurantCacheKey = 'product_restaurant_cache';
   static Box<User>? _userBox;
+  static const String _restaurantProductCacheBox = 'restaurantProductCacheBox';
 
   /// Initialize Hive and open all boxes
   static Future<void> init() async {
@@ -29,12 +31,14 @@ class DatabaseService {
     Hive.registerAdapter(RestaurantAdapter());
     Hive.registerAdapter(ProductAdapter());
     Hive.registerAdapter(ProductRestaurantCacheAdapter());
+    Hive.registerAdapter(RestaurantProductCacheAdapter());
 
     // Open boxes
     _userBox = await Hive.openBox<User>(_userBoxName);
     await Hive.openBox<Product>(_productsBox);
     await Hive.openBox<Restaurant>(_restaurantsBox);
     await Hive.openBox<ProductRestaurantCache>(_productRestaurantCacheBox);
+    await Hive.openBox<RestaurantProductCache>(_restaurantProductCacheBox);
   }
 
   /// Save current user to local database
@@ -186,77 +190,111 @@ class DatabaseService {
     }
   }
 
-  // Product-Restaurant cache methods
+  // Product-Restaurant relationship caching
   static Future<void> cacheProductRestaurantRelations(
-      Map<int, List<Restaurant>> productRestaurants) async {
-    try {
-      final box = Hive.box<ProductRestaurantCache>(_productRestaurantCacheBox);
+      Map<int, List<Restaurant>> productRestaurantsCache) async {
+    final box =
+        await Hive.openBox<ProductRestaurantCache>(_productRestaurantCacheBox);
 
-      // Convert the Map<int, List<Restaurant>> to Map<String, List<int>>
-      // This is because Hive has better support for simple data types
-      final Map<String, List<int>> serializedMap = {};
+    // Convert the Map<int, List<Restaurant>> to Map<String, List<int>>
+    // because Hive works better with primitive types
+    final Map<String, List<int>> serializableMap = {};
 
-      productRestaurants.forEach((productId, restaurants) {
-        serializedMap[productId.toString()] =
-            restaurants.map((r) => r.id).toList();
-      });
+    productRestaurantsCache.forEach((productId, restaurants) {
+      // Store restaurant IDs instead of full objects
+      serializableMap[productId.toString()] =
+          restaurants.map((r) => r.id).toList();
+    });
 
-      // Store the serialized map
-      await box.put(_productRestaurantCacheKey,
-          ProductRestaurantCache(productRestaurantsMap: serializedMap));
-
-      debugPrint('Product-Restaurant relations cached successfully');
-    } catch (e) {
-      debugPrint('Error caching product-restaurant relations: $e');
-    }
+    final cacheObject =
+        ProductRestaurantCache(productRestaurantsMap: serializableMap);
+    await box.put(_productRestaurantCacheKey, cacheObject);
+    await box.close();
   }
 
   static Future<Map<int, List<Restaurant>>> getProductRestaurantCache() async {
-    try {
-      final box = Hive.box<ProductRestaurantCache>(_productRestaurantCacheBox);
-      final cache = box.get(_productRestaurantCacheKey);
+    final box =
+        await Hive.openBox<ProductRestaurantCache>(_productRestaurantCacheBox);
+    final cacheObject = box.get(_productRestaurantCacheKey);
+    final Map<int, List<Restaurant>> result = {};
 
-      if (cache == null) {
-        debugPrint('No product-restaurant cache found');
-        return {};
+    if (cacheObject != null) {
+      // First, get all restaurants to use for lookup
+      final allRestaurants = await getCachedRestaurants();
+      final Map<int, Restaurant> restaurantMap = {};
+      for (var restaurant in allRestaurants) {
+        restaurantMap[restaurant.id] = restaurant;
       }
 
-      // Convert back from serialized format to usable format
-      final Map<int, List<Restaurant>> result = {};
-      final restaurantsBox = Hive.box<Restaurant>(_restaurantsBox);
-
-      cache.productRestaurantsMap.forEach((productIdStr, restaurantIds) {
+      // Convert back from Map<String, List<int>> to Map<int, List<Restaurant>>
+      cacheObject.productRestaurantsMap.forEach((productIdStr, restaurantIds) {
         final productId = int.parse(productIdStr);
-        final restaurantsList = <Restaurant>[];
+        final List<Restaurant> restaurantsForProduct = [];
 
         for (var restaurantId in restaurantIds) {
-          final restaurant = restaurantsBox.get(restaurantId.toString());
-          if (restaurant != null) {
-            restaurantsList.add(restaurant);
+          if (restaurantMap.containsKey(restaurantId)) {
+            restaurantsForProduct.add(restaurantMap[restaurantId]!);
           }
         }
 
-        if (restaurantsList.isNotEmpty) {
-          result[productId] = restaurantsList;
-        }
+        result[productId] = restaurantsForProduct;
       });
-
-      debugPrint(
-          'Loaded ${result.length} product-restaurant relations from cache');
-      return result;
-    } catch (e) {
-      debugPrint('Error loading product-restaurant cache: $e');
-      return {};
     }
+
+    await box.close();
+    return result;
   }
 
   static Future<void> clearProductRestaurantCache() async {
+    final box =
+        await Hive.openBox<ProductRestaurantCache>(_productRestaurantCacheBox);
+    await box.clear();
+    await box.close();
+  }
+
+  static Future<void> cacheProductsForRestaurant(
+      int restaurantId, List<Product> products) async {
     try {
-      final box = Hive.box<ProductRestaurantCache>(_productRestaurantCacheBox);
-      await box.clear();
-      debugPrint('Product-Restaurant cache cleared');
+      final box = Hive.box<RestaurantProductCache>(_restaurantProductCacheBox);
+      final productIds = products.map((p) => p.id).toList();
+
+      await box.put(
+        restaurantId.toString(),
+        RestaurantProductCache(productIds: productIds),
+      );
+
+      final productsBox = Hive.box<Product>(_productsBox);
+      for (var product in products) {
+        productsBox.put(product.id.toString(), product);
+      }
+
+      debugPrint('Cached products for restaurant $restaurantId');
     } catch (e) {
-      debugPrint('Error clearing product-restaurant cache: $e');
+      debugPrint('Error caching products for restaurant $restaurantId: $e');
+    }
+  }
+
+  static Future<List<Product>> getCachedProductsForRestaurant(
+      int restaurantId) async {
+    try {
+      final box = Hive.box<RestaurantProductCache>(_restaurantProductCacheBox);
+      final cache = box.get(restaurantId.toString());
+
+      if (cache == null) return [];
+
+      final productsBox = Hive.box<Product>(_productsBox);
+      final products = <Product>[];
+
+      for (var id in cache.productIds) {
+        final product = productsBox.get(id.toString());
+        if (product != null) products.add(product);
+      }
+
+      return products;
+    } catch (e) {
+      debugPrint(
+          'Error loading cached products for restaurant $restaurantId: $e');
+      return [];
     }
   }
 }
