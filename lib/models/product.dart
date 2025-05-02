@@ -1,7 +1,19 @@
-class Product {
+import 'package:hive/hive.dart';
+
+part 'product.g.dart'; 
+
+@HiveType(typeId: 1) 
+class Product extends HiveObject {
+  @HiveField(0)
   final int id;
+
+  @HiveField(1)
   final String name;
+
+  @HiveField(2)
   final String description;
+
+  @HiveField(3)
   final String imageUrl;
 
   Product({
@@ -19,4 +31,4 @@ class Product {
       imageUrl: json['imageUrl'] ?? '',
     );
   }
-} 
+}

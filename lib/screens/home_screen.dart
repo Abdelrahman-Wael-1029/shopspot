@@ -21,11 +21,11 @@ class _HomeScreenState extends State<HomeScreen> {
     
     Future.microtask(() =>
         Provider.of<RestaurantProvider>(context, listen: false)
-            .fetchRestaurants());
+            .fetchRestaurants(context));
     
     Future.microtask(() =>
         Provider.of<ProductProvider>(context, listen: false)
-            .fetchProducts());
+            .fetchProducts(context));
           
   }
 

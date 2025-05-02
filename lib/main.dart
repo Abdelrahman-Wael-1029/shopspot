@@ -182,6 +182,8 @@ class _AppLifecycleManagerState extends State<AppLifecycleManager>
       _ConnectivityProvider.checkConnectivity();
       if (_ConnectivityProvider.shouldRefresh &&
           _authProvider.isAuthenticated) {
+         Provider.of<ProductProvider>(context, listen: false).fetchProducts(context);
+         Provider.of<RestaurantProvider>(context, listen: false).fetchRestaurants(context);
         // Refresh data from server - but not profile data (will be refreshed on demand)
         _ConnectivityProvider.markRefreshed();
       }

@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:shopspot/providers/connectivity_provider.dart';
 import 'package:shopspot/utils/app_colors.dart';
+import 'package:shopspot/widgets/card_skeleton.dart';
 import 'package:shopspot/widgets/custom_search.dart';
 import '../providers/restaurant_provider.dart';
 import '../models/restaurant.dart';
@@ -46,28 +47,20 @@ class RestaurantsScreen extends StatelessWidget {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: RefreshIndicator(
         onRefresh: () async {
-          await context.read<RestaurantProvider>().fetchRestaurants();
+          await context.read<RestaurantProvider>().fetchRestaurants(context);
         },
         child: SingleChildScrollView(
           child: Consumer<RestaurantProvider>(
             builder: (ctx, restaurantProvider, child) {
               if (restaurantProvider.isLoading) {
-                return _buildShimmerEffect(context);
-              }
-
-              if (restaurantProvider.error != null) {
-                return Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Center(
-                    child: Text(
-                      'An error occurred: ${restaurantProvider.error}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.error,
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                );
+                return ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    itemCount: 7,
+                    itemBuilder: (ctx, i) {
+                      return const CardSkeleton();
+                    });
               }
 
               return Column(
@@ -107,69 +100,6 @@ class RestaurantsScreen extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildShimmerEffect(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final baseColor = isDark ? Colors.grey[800]! : Colors.grey[300]!;
-    final highlightColor = isDark ? Colors.grey[700]! : Colors.grey[100]!;
-    final containerColor = isDark ? Colors.grey[850]! : Colors.white;
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: 5,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemBuilder: (ctx, i) {
-        return Card(
-          elevation: 4,
-          margin: const EdgeInsets.only(bottom: 16),
-          child: Shimmer.fromColors(
-            baseColor: baseColor,
-            highlightColor: highlightColor,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // صورة وهمية للمطعم
-                  Container(
-                    width: double.infinity,
-                    height: 160,
-                    color: containerColor,
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    width: double.infinity,
-                    height: 14,
-                    color: containerColor,
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    width: 150,
-                    height: 14,
-                    color: containerColor,
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    width: 50,
-                    height: 14,
-                    color: containerColor,
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    width: 80,
-                    height: 14,
-                    color: containerColor,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 }

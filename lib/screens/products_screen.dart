@@ -49,10 +49,16 @@ class _ProductsScreenState extends State<ProductsScreen> {
           }
 
           if (productProvider.errorRestaurant != null) {
-            return Center(
-              child: Text(
-                'An error occurred: ${productProvider.errorRestaurant}',
-                textAlign: TextAlign.center,
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Center(
+                child: Text(
+                  'An error occurred: ${productProvider.errorRestaurant}',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.error,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
               ),
             );
           }

@@ -1,10 +1,28 @@
-class Restaurant {
+import 'package:hive/hive.dart';
+
+part 'restaurant.g.dart'; 
+
+@HiveType(typeId: 2)
+class Restaurant extends HiveObject {
+  @HiveField(0)
   final int id;
+
+  @HiveField(1)
   final String name;
+
+  @HiveField(2)
   final String description;
+
+  @HiveField(3)
   final String location;
+
+  @HiveField(4)
   final String? imageUrl;
+
+  @HiveField(5)
   final double latitude;
+
+  @HiveField(6)
   final double longitude;
 
   Restaurant({
@@ -24,8 +42,20 @@ class Restaurant {
       description: json['description'],
       location: json['location'] ?? '',
       imageUrl: json['imageUrl'],
-      latitude:double.parse( json['latitude']),
-      longitude:double.parse( json['longitude']),
+      latitude: double.parse(json['latitude'].toString()),
+      longitude: double.parse(json['longitude'].toString()),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'description': description,
+      'location': location,
+      'imageUrl': imageUrl,
+      'latitude': latitude,
+      'longitude': longitude,
+    };
   }
 }

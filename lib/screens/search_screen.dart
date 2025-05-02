@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shopspot/utils/app_colors.dart';
 import 'package:shopspot/widgets/custom_search.dart';
 import '../providers/product_provider.dart';
 import '../providers/restaurant_provider.dart';
@@ -38,21 +39,16 @@ class _SearchScreenState extends State<SearchScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          await context.read<ProductProvider>().fetchProducts();
+          // Clear the restaurant cache when refreshing
+          await context.read<ProductProvider>().fetchProducts(context);
         },
         child: SingleChildScrollView(
           child: Consumer<ProductProvider>(
             builder: (ctx, productProvider, child) {
               if (productProvider.isLoading) {
-                return const Center(child: LinearProgressIndicator());
-              }
-
-              if (productProvider.error != null) {
-                return Center(
-                  child: Text(
-                    'An error occurred: ${productProvider.error}',
-                    textAlign: TextAlign.center,
-                  ),
+                return LinearProgressIndicator(
+                  backgroundColor: AppColors.primary,
+                  color: AppColors.secondary,
                 );
               }
 
@@ -80,7 +76,9 @@ class _SearchScreenState extends State<SearchScreen> {
                           itemCount: productProvider.searchResults.length,
                           itemBuilder: (ctx, i) {
                             Product product = productProvider.searchResults[i];
-                            return SearchResultItem(product: product);
+                            return SearchResultItem(
+                              product: product,
+                            );
                           },
                         ),
                 ],
@@ -96,7 +94,10 @@ class _SearchScreenState extends State<SearchScreen> {
 class SearchResultItem extends StatelessWidget {
   final Product product;
 
-  const SearchResultItem({super.key, required this.product});
+  const SearchResultItem({
+    super.key,
+    required this.product,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -141,8 +142,7 @@ class SearchResultItem extends StatelessWidget {
         ),
         children: [
           FutureBuilder<List<Restaurant>>(
-            future: Provider.of<RestaurantProvider>(context, listen: false)
-                .getRestaurantsForProduct(product.id),
+            future: _getRestaurantsForProduct(context, product.id),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Padding(
@@ -233,5 +233,13 @@ class SearchResultItem extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // Helper method to get restaurants using the provider's cache
+  Future<List<Restaurant>> _getRestaurantsForProduct(
+      BuildContext context, int productId) async {
+    // Use the provider's caching mechanism
+    return Provider.of<RestaurantProvider>(context, listen: false)
+        .getRestaurantsForProduct(context, productId);
   }
 }
