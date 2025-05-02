@@ -8,11 +8,13 @@ class ProductProvider with ChangeNotifier {
   List<Product> _searchResults = [];
   bool _isLoading = false;
   String? _error;
+  String? _errorRestaurant;
 
   List<Product> get products => _products;
   List<Product> get searchResults => _searchResults;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  String? get errorRestaurant => _errorRestaurant;
 
   Future<void> fetchProducts() async {
     _isLoading = true;
@@ -53,12 +55,12 @@ class ProductProvider with ChangeNotifier {
         notifyListeners();
       } else {
         _isLoading = false;
-        _error = result['message'];
+        _errorRestaurant = result['message'];
         notifyListeners();
       }
     } catch (e) {
       _isLoading = false;
-      _error = e.toString();
+      _error = 'Unable to connect to the server. Please try again later.';
       notifyListeners();
     }
   }

@@ -48,10 +48,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (productProvider.error != null) {
+          if (productProvider.errorRestaurant != null) {
             return Center(
               child: Text(
-                'An error occurred: ${productProvider.error}',
+                'An error occurred: ${productProvider.errorRestaurant}',
                 textAlign: TextAlign.center,
               ),
             );
