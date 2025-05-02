@@ -21,7 +21,7 @@ class CardSkeleton extends StatelessWidget {
           children: [
             // Image placeholder
             Container(
-              height: 180,
+              height: 110,
               decoration: BoxDecoration(
                 color: Colors.grey[300],
                 borderRadius: const BorderRadius.only(
@@ -30,7 +30,7 @@ class CardSkeleton extends StatelessWidget {
                 ),
               ),
             ),
-    
+
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -42,7 +42,7 @@ class CardSkeleton extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Container(
-                          height: 24,
+                          height: 14,
                           decoration: BoxDecoration(
                             color: Colors.grey[300],
                             borderRadius: BorderRadius.circular(8),
@@ -51,10 +51,10 @@ class CardSkeleton extends StatelessWidget {
                       ),
                       const SizedBox(width: 16),
                       SizedBox(
-                        height: 40,
+                        height: 20,
                         width: 40,
                         child: Container(
-                          height: 20,
+                          height: 16,
                           decoration: BoxDecoration(
                             color: Colors.grey[300],
                             borderRadius: BorderRadius.circular(8),
@@ -63,12 +63,12 @@ class CardSkeleton extends StatelessWidget {
                       ),
                     ],
                   ),
-    
+
                   const SizedBox(height: 8),
-    
+
                   // Description
                   Container(
-                    height: 16,
+                    height: 12,
                     decoration: BoxDecoration(
                       color: Colors.grey[300],
                       borderRadius: BorderRadius.circular(8),
@@ -76,19 +76,19 @@ class CardSkeleton extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Container(
-                    height: 16,
+                    height: 12,
                     width: MediaQuery.of(context).size.width * 0.7,
                     decoration: BoxDecoration(
                       color: Colors.grey[300],
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-    
+
                   const SizedBox(height: 16),
-    
+
                   // Distance info
                   Container(
-                    height: 14,
+                    height: 12,
                     width: 100,
                     decoration: BoxDecoration(
                       color: Colors.grey[300],

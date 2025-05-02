@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:shopspot/providers/location_provider.dart';
+import 'package:shopspot/utils/app_colors.dart';
 import '../models/restaurant.dart';
 
 class RestaurantMapScreen extends StatefulWidget {
@@ -102,6 +103,8 @@ class _RestaurantMapScreenState extends State<RestaurantMapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final locationProvider = Provider.of<LocationProvider>(context);
+
     if (widget.restaurants.isEmpty) {
       return Scaffold(
         appBar: AppBar(
@@ -136,6 +139,25 @@ class _RestaurantMapScreenState extends State<RestaurantMapScreen> {
             userAgentPackageName: 'com.example.shopspot',
           ),
           MarkerLayer(markers: _markers),
+          // Current Location Marker
+          if (locationProvider.hasLocation)
+            MarkerLayer(
+              markers: [
+                Marker(
+                  point: LatLng(
+                    locationProvider.currentLocation!.latitude,
+                    locationProvider.currentLocation!.longitude,
+                  ),
+                  width: 40,
+                  height: 40,
+                  child: Icon(
+                    Icons.my_location,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
     );
