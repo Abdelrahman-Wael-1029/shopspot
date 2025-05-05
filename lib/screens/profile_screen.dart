@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import '../../models/user_model.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/connectivity_provider.dart';
-import '../../utils/validator.dart';
-import '../../widgets/custom_button.dart';
-import '../../widgets/custom_text_field.dart';
+import 'package:shopspot/utils/app_routes.dart';
+import 'package:shopspot/models/user_model.dart';
+import 'package:shopspot/providers/auth_provider.dart';
+import 'package:shopspot/services/connectivity_service.dart';
+import 'package:shopspot/widgets/custom_button.dart';
+import 'package:shopspot/widgets/custom_text_field.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -55,12 +55,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadUserProfile() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final connectivityProvider =
-        Provider.of<ConnectivityProvider>(context, listen: false);
+    final connectivityService =
+        Provider.of<ConnectivityService>(context, listen: false);
 
     // Check if we need to get fresh data from server
     final shouldLoadFromServer =
-        connectivityProvider.isOnline && connectivityProvider.shouldRefresh;
+        connectivityService.isOnline && connectivityService.shouldRefresh;
 
     // Display current cached data immediately if available
     _updateUIWithUserData(authProvider.user);
@@ -73,8 +73,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _updateUIWithUserData(authProvider.user);
 
       // Mark as refreshed
-      connectivityProvider.markRefreshed();
-    } else if (!connectivityProvider.isOnline) {
+      connectivityService.markRefreshed();
+    } else if (!connectivityService.isOnline) {
       // Show toast if we're offline
       Fluttertoast.showToast(
         msg: "You are offline. Showing cached profile data.",
@@ -155,7 +155,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                Navigator.pop(context);
+              },
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 50),
               ),
@@ -176,7 +178,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _confirmPasswordError = null;
 
       // Validate name (required)
-      if (!Validator.isValidName(_nameController.text)) {
+      if (_nameController.text.isEmpty) {
         _nameError = 'Name is required';
         isValid = false;
       }
@@ -185,15 +187,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (_passwordController.text.isNotEmpty ||
           _confirmPasswordController.text.isNotEmpty) {
         // Validate password
-        if (!Validator.isValidPassword(_passwordController.text)) {
+        if (_passwordController.text.length < 8 ||
+            !RegExp(r'\d').hasMatch(_passwordController.text)) {
           _passwordError =
               'Password must be at least 8 characters with at least 1 number';
           isValid = false;
         }
 
         // Validate confirm password
-        if (!Validator.passwordsMatch(
-            _passwordController.text, _confirmPasswordController.text)) {
+        if (_passwordController.text != _confirmPasswordController.text) {
           _confirmPasswordError = 'Passwords do not match';
           isValid = false;
         }
@@ -244,7 +246,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await authProvider.logout(context);
 
     if (mounted) {
-      Navigator.pushReplacementNamed(context, '/login');
+      Navigator.pushReplacementNamed(
+        context,
+        AppRoutes.login,
+      );
     }
   }
 
@@ -256,7 +261,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         content: const Text('Are you sure you want to logout?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              Navigator.pop(context);
+            },
             child: const Text('Cancel'),
           ),
           TextButton(
@@ -287,6 +294,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
+        centerTitle: true,
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
@@ -305,6 +313,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _confirmPasswordController.clear();
                 }
               });
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.restaurant),
+            tooltip: 'Restaurants',
+            onPressed: () {
+              Navigator.pop(context);
             },
           ),
           PopupMenuButton<String>(
@@ -415,7 +430,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Column(
       children: [
         _buildInfoCard('Name', user.name),
-        if (user.email.isNotEmpty) _buildInfoCard('Email', user.email),
+        _buildInfoCard('Email', user.email),
         if (user.gender != null) _buildInfoCard('Gender', user.gender!),
         if (user.level != null) _buildInfoCard('Level', user.level!),
       ],
@@ -529,7 +544,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildGenderSelection() {
     return Card(
-      color: Colors.transparent,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10.0),
@@ -540,11 +554,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'Gender',
-              style: Theme.of(context).textTheme.labelLarge!.copyWith(
-                    fontSize: 16,
-                  ),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 10),
             Row(

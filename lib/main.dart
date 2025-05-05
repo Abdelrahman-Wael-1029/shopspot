@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:shopspot/providers/product_provider.dart';
-import 'package:shopspot/providers/restaurant_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:shopspot/providers/index_provider.dart';
+import 'package:shopspot/utils/app_routes.dart';
 import 'package:shopspot/utils/app_theme.dart';
-import 'providers/auth_provider.dart';
-import 'providers/location_provider.dart';
-import 'providers/index_provider.dart';
-import 'services/database_service.dart';
-import 'providers/connectivity_provider.dart';
-import 'utils/app_routes.dart';
+import 'package:shopspot/providers/auth_provider.dart';
+import 'package:shopspot/providers/restaurant_provider.dart';
+import 'package:shopspot/providers/favorite_provider.dart';
+import 'package:shopspot/providers/location_provider.dart';
+import 'package:shopspot/providers/product_provider.dart';
+import 'package:shopspot/services/database_service.dart';
+import 'package:shopspot/services/connectivity_service.dart';
 
 void main() async {
   // Ensure Flutter is initialized - this is important!
@@ -24,12 +25,13 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (context) => ConnectivityProvider()),
-        ChangeNotifierProvider(create: (context) => AuthProvider()),
-        ChangeNotifierProvider(create: (context) => LocationProvider()),
-        ChangeNotifierProvider(create: (context) => ProductProvider()),
-        ChangeNotifierProvider(create: (context) => RestaurantProvider()),
-        ChangeNotifierProvider(create: (context) => IndexProvider()),
+        ChangeNotifierProvider(create: (_) => IndexProvider()),
+        ChangeNotifierProvider(create: (_) => ConnectivityService()),
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => RestaurantProvider()),
+        ChangeNotifierProvider(create: (_) => FavoriteProvider()),
+        ChangeNotifierProvider(create: (_) => LocationProvider()),
+        ChangeNotifierProvider(create: (_) => ProductProvider()),
       ],
       child: const MyApp(),
     ),
@@ -42,13 +44,16 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Restaurant App',
+      title: 'ShopSpot',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        useMaterial3: true,
+      ),
+      // theme: AppTheme.lightTheme,
+      // darkTheme: AppTheme.darkTheme,
+      // themeMode: ThemeMode.system,
       onGenerateRoute: AppRoutes.generateRoute,
-      home: const InitScreen(),
     );
   }
 }
@@ -74,22 +79,16 @@ class _InitScreenState extends State<InitScreen> {
   Future<void> _initializeAndNavigate() async {
     if (!mounted) return;
 
-    
-
     // Check authentication status
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final isAuthenticated = authProvider.checkCachedAuthentication();
 
-    // Check connectivity status
-    final connectivityProvider =
-        Provider.of<ConnectivityProvider>(context, listen: false);
-    await connectivityProvider.initConnectivity();
-
     // Wait a brief moment to ensure proper initialization
     await Future.delayed(const Duration(milliseconds: 500));
 
-    final locationProvider = Provider.of<LocationProvider>(context, listen: false);
-    await locationProvider.initLocation();
+    // Request location permission
+    await LocationProvider.checkLocationPermission(request: true);
+
     // Remove splash screen
     FlutterNativeSplash.remove();
 
@@ -145,8 +144,10 @@ class AppLifecycleManager extends StatefulWidget {
 
 class _AppLifecycleManagerState extends State<AppLifecycleManager>
     with WidgetsBindingObserver {
-  late ConnectivityProvider _ConnectivityProvider;
+  // Restaurant providers as class members to avoid BuildContext access in async methods
+  late ConnectivityService _connectivityService;
   late AuthProvider _authProvider;
+  late RestaurantProvider _restaurantProvider;
   bool _providersInitialized = false;
 
   @override
@@ -166,9 +167,11 @@ class _AppLifecycleManagerState extends State<AppLifecycleManager>
     super.didChangeDependencies();
     // Initialize providers once when dependencies are available
     if (!_providersInitialized) {
-      _ConnectivityProvider =
-          Provider.of<ConnectivityProvider>(context, listen: false);
+      _connectivityService =
+          Provider.of<ConnectivityService>(context, listen: false);
       _authProvider = Provider.of<AuthProvider>(context, listen: false);
+      _restaurantProvider =
+          Provider.of<RestaurantProvider>(context, listen: false);
       _providersInitialized = true;
     }
   }
@@ -179,13 +182,13 @@ class _AppLifecycleManagerState extends State<AppLifecycleManager>
 
     // When app resumes, refresh data if needed
     if (state == AppLifecycleState.resumed) {
-      _ConnectivityProvider.checkConnectivity();
-      if (_ConnectivityProvider.shouldRefresh &&
-          _authProvider.isAuthenticated) {
-         Provider.of<ProductProvider>(context, listen: false).fetchProducts(context);
-         Provider.of<RestaurantProvider>(context, listen: false).fetchRestaurants(context);
+      _connectivityService.checkConnectivity();
+      if (_connectivityService.shouldRefresh && _authProvider.isAuthenticated) {
         // Refresh data from server - but not profile data (will be refreshed on demand)
-        _ConnectivityProvider.markRefreshed();
+        _restaurantProvider.refreshRestaurants(context);
+
+        // Mark that we've refreshed
+        _connectivityService.markRefreshed();
       }
     }
   }

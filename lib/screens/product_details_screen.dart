@@ -1,320 +1,336 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
-import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shopspot/utils/app_colors.dart';
-import '../providers/location_provider.dart';
-import '../models/product.dart';
-import '../models/restaurant.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import 'package:shopspot/models/product_model.dart';
+import 'package:shopspot/models/restaurant_model.dart';
+import 'package:shopspot/services/database_service.dart';
 
-class ProductDetailsScreen extends StatefulWidget {
-  final Restaurant? restaurant;
+class ProductDetailsScreen extends StatelessWidget {
   final Product product;
+  final Restaurant restaurant;
 
   const ProductDetailsScreen({
     super.key,
-    this.restaurant,
     required this.product,
+    required this.restaurant,
   });
 
   @override
-  _ProductDetailsScreenState createState() => _ProductDetailsScreenState();
-}
-
-class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final locationProvider = Provider.of<LocationProvider>(context);
+    // Get price and status for this product from restaurant
+    final restaurantProduct =
+        DatabaseService.getRelationsByRestaurantId(restaurant.id)
+            .firstWhere((relation) => relation.productId == product.id);
+    final int price = restaurantProduct.price;
+    final String status = restaurantProduct.status;
+    final double rating = restaurantProduct.rating;
+
+    // Status indicator colors
+    final Map<String, Color> statusColors = {
+      'available': Colors.green,
+      'out_of_stock': Colors.red,
+      'coming_soon': Colors.orange,
+    };
+
+    // Format status for display
+    String formattedStatus = 'Unknown';
+    Color statusColor = Colors.grey;
+    formattedStatus = status.replaceAll('_', ' ').toUpperCase();
+    statusColor = statusColors[status] ?? Colors.grey;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Product Details'),
-        // make linear loading in bottom
-        bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(4.0),
-            child: (locationProvider.loading)
-                ? LinearProgressIndicator()
-                : SizedBox.shrink()),
+        title: Text(product.name),
       ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Product Image
-            CachedNetworkImage(
-              imageUrl: widget.product.imageUrl,
-              height: 200,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              placeholder: (context, url) => Container(
-                height: 200,
-                color: AppColors.lightGrey,
-                child: Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.primary,
+            // Product image with status badge overlay
+            Stack(
+              children: [
+                // Product image
+                SizedBox(
+                  height: 250,
+                  width: double.infinity,
+                  child: CachedNetworkImage(
+                    imageUrl: product.imageUrl,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      color: Colors.grey[200],
+                      child: const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.image_not_supported,
+                              size: 40,
+                              color: Colors.grey,
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              'Image not available',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-              errorWidget: (context, url, error) => Container(
-                height: 200,
-                color: AppColors.lightGrey,
-                child: Icon(
-                  Icons.fastfood,
-                  size: 60,
-                  color: AppColors.grey,
+
+                // Status badge
+                Positioned(
+                  top: 16,
+                  right: 16,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.9),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      formattedStatus,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
 
-            // Product Details
+            // Product details
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    widget.product.name,
-                    style: theme.textTheme.headlineLarge,
+                  // Product name row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          product.name,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        margin: const EdgeInsets.only(left: 16),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).primaryColor,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '\$${price.toString()}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    widget.product.description,
-                    style: theme.textTheme.bodyLarge,
-                  ),
-                ],
-              ),
-            ),
 
-            // Restaurant Information
-            if (widget.restaurant != null) ...[
-              Divider(
-                thickness: 1,
-                color: AppColors.border,
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Restaurant Information',
-                      style: theme.textTheme.headlineLarge?.copyWith(
-                        fontSize: 18,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                    // Restaurant Name & Location
-                    ListTile(
-                      leading: Icon(
-                        Icons.restaurant,
-                        color: AppColors.primary,
-                      ),
-                      title: Text(
-                        widget.restaurant!.name,
-                        style: theme.textTheme.bodyLarge,
-                      ),
-                      subtitle: Text(
-                        widget.restaurant!.location,
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                    ),
-
-                    // Distance
-                    if (locationProvider.hasLocation)
-                      ListTile(
-                        leading: Icon(
-                          Icons.location_on,
-                          color: AppColors.secondary,
-                        ),
-                        title: Text(
-                          'Distance: ${locationProvider.calculateDistance(
-                                widget.restaurant!.latitude,
-                                widget.restaurant!.longitude,
-                              ).toStringAsFixed(2)} km',
-                          style: theme.textTheme.bodyLarge,
-                        ),
-                      ),
-
-                    // Get Directions Button
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        icon: const Icon(Icons.directions),
-                        label: const Text('Get Directions'),
-                        onPressed: () {
-                          locationProvider.openGoogleMapWithDestination(
-                            widget.restaurant!.latitude,
-                            widget.restaurant!.longitude,
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: AppColors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                  // Product info card
+                  Card(
+                    margin: const EdgeInsets.symmetric(vertical: 12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Restaurant section
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.restaurant,
+                                color: Colors.orange,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                restaurant.name,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ),
-                    ),
-                    // refresh location if not have permission or location
-                    if (!locationProvider.hasLocation ||
-                        !locationProvider.hasPermission)
-                      const SizedBox(height: 16),
-                    if (!locationProvider.hasLocation ||
-                        !locationProvider.hasPermission)
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          icon: const Icon(Icons.location_on),
-                          label: const Text('Refresh Location'),
-                          onPressed: locationProvider.refreshLocation,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.warning,
-                            foregroundColor: AppColors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ),
 
-                    // Map
-                    const SizedBox(height: 16),
-                    Container(
-                      height: 200,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: AppColors.border),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: FlutterMap(
-                          options: MapOptions(
-                            initialCenter: LatLng(
-                              widget.restaurant!.latitude,
-                              widget.restaurant!.longitude,
-                            ),
-                            initialZoom: 15,
-                            interactionOptions: const InteractionOptions(
-                              enableScrollWheel: false,
-                            ),
-                          ),
-                          children: [
-                            TileLayer(
-                              urlTemplate:
-                                  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                              userAgentPackageName: 'com.example.shopspot',
-                            ),
-
-                            // Restaurant Marker
-                            MarkerLayer(
-                              markers: [
-                                Marker(
-                                  point: LatLng(
-                                    widget.restaurant!.latitude,
-                                    widget.restaurant!.longitude,
+                          // Rating section (new)
+                          ...[
+                            const Divider(height: 24),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                const Text(
+                                  'Rating:',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
                                   ),
-                                  width: 40,
-                                  height: 40,
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      showDialog(
-                                        context: context,
-                                        builder: (context) => AlertDialog(
-                                          title: Text(
-                                            widget.restaurant!.name,
-                                            style: theme.textTheme.headlineLarge
-                                                ?.copyWith(
-                                              fontSize: 18,
-                                            ),
-                                          ),
-                                          content: Text(
-                                            widget.restaurant!.location,
-                                            style: theme.textTheme.bodyMedium,
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(context),
-                                              child: Text(
-                                                'Close',
-                                                style: TextStyle(
-                                                  color: AppColors.primary,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                          backgroundColor: AppColors.card,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                          ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      RatingBarIndicator(
+                                        rating: rating,
+                                        itemBuilder: (context, _) => const Icon(
+                                          Icons.star,
+                                          color: Colors.amber,
                                         ),
-                                      );
-                                    },
-                                    child: Icon(
-                                      Icons.location_on,
-                                      color: AppColors.error,
-                                      size: 30,
-                                    ),
+                                        itemCount: 5,
+                                        itemSize: 18.0,
+                                        direction: Axis.horizontal,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        rating.toStringAsFixed(1),
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
-
-                            // Current Location Marker
-                            if (locationProvider.hasLocation)
-                              MarkerLayer(
-                                markers: [
-                                  Marker(
-                                    point: LatLng(
-                                      locationProvider
-                                          .currentLocation!.latitude,
-                                      locationProvider
-                                          .currentLocation!.longitude,
-                                    ),
-                                    width: 40,
-                                    height: 40,
-                                    child: Icon(
-                                      Icons.my_location,
-                                      color: AppColors.primary,
-                                      size: 20,
-                                    ),
-                                  ),
-                                ],
-                              ),
                           ],
-                        ),
+
+                          ...[
+                            const Divider(height: 24),
+
+                            // Status section
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Status:',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: statusColor.withValues(
+                                              alpha: 0.2),
+                                          borderRadius:
+                                              BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          formattedStatus,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: statusColor,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Icon(
+                                            status == 'available'
+                                                ? Icons.check_circle
+                                                : status == 'out_of_stock'
+                                                    ? Icons.remove_circle
+                                                    : Icons.update,
+                                            color: statusColor,
+                                            size: 16,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              _getStatusDescription(status),
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ],
+                  ),
 
-            // Error Message
-            if (locationProvider.error != null)
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  locationProvider.error!,
-                  style: TextStyle(color: AppColors.error),
-                ),
+                  const SizedBox(height: 16),
+
+                  // Description title
+                  const Text(
+                    'Description',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Product description
+                  Text(
+                    product.description,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
               ),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  // Helper method to get a user-friendly status description
+  String _getStatusDescription(String status) {
+    switch (status) {
+      case 'available':
+        return 'This product is currently available for purchase.';
+      case 'out_of_stock':
+        return 'This product is currently out of stock. Check back later.';
+      case 'coming_soon':
+        return 'This product will be available soon. Stay tuned!';
+      default:
+        return 'Status information unavailable.';
+    }
   }
 }

@@ -1,130 +1,120 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:shopspot/models/restaurant_model.dart';
 
 class LocationProvider extends ChangeNotifier {
+  bool _isLoading = false;
   Position? _currentLocation;
-  String? _error;
-  bool hasPermission = false;
-  bool loading = false;
+  final Map<int, double?> _restaurantDistances = {};
 
+  bool get isLoading => _isLoading;
   Position? get currentLocation => _currentLocation;
-  String? get error => _error;
-  bool get hasLocation => _currentLocation != null;
 
-  // Getter to check if location services are available
-  Future get isLocationServiceEnabled async {
-    return await Geolocator.isLocationServiceEnabled();
+  static Future<bool> checkLocationPermission({bool request = false}) async {
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        if (request) {
+          permission = await Geolocator.requestPermission();
+          if (permission == LocationPermission.denied) {
+            // Permissions are denied
+            return false;
+          }
+        } else {
+          // Permissions are denied and not asked
+          return false;
+        }
+      } else if (permission == LocationPermission.deniedForever) {
+        // Permissions are permanently denied
+        return false;
+      }
+
+      // Check if location services are enabled
+      return await Geolocator.isLocationServiceEnabled();
+    } catch (e) {
+      // Handle any exceptions that may occur during permission check
+      return false;
+    }
   }
 
-  // Initialize location (for first load)
-  Future initLocation() async {
+  // Refresh current location
+  Future<void> refreshLocation() async {
     try {
-      // Just check permission status without requesting again
-      LocationPermission permission = await Geolocator.checkPermission();
-
-      // If denied forever, just set error and return
-      if (permission == LocationPermission.deniedForever) {
-        hasPermission = false;
-        _error =
-            'Location permissions are permanently denied. Please enable them in app settings.';
-        notifyListeners();
+      final hasPermission = await checkLocationPermission();
+      if (!hasPermission) {
         return;
       }
 
-      // Only request if it's the first time (when permission is denied)
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        // Don't request again if user denied
-      }
-
-      // Update permission status based on current state
-      hasPermission = (permission == LocationPermission.always ||
-          permission == LocationPermission.whileInUse);
-
-      if (hasPermission) {
-        _currentLocation = await Geolocator.getCurrentPosition();
-        _error = null;
-      } else {
-        _error = 'Location permissions are not granted.';
-      }
-      notifyListeners();
+      // Always get fresh GPS data when refreshing
+      _currentLocation = await Geolocator.getCurrentPosition();
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      // Do nothing
     }
   }
 
-  // Refresh location if not have permission request again and update current location
-  Future refreshLocation() async {
-    loading = true;
+  // Calculate distance to restaurant (locally)
+  double? calculateDistance(Restaurant restaurant) {
+    if (_currentLocation == null) {
+      return null; // Invalid distance
+    }
+
+    // First check if we already have the distance cached
+    if (_restaurantDistances.containsKey(restaurant.id)) {
+      return _restaurantDistances[restaurant.id]!;
+    }
+
+    try {
+      final distance = Geolocator.distanceBetween(
+            _currentLocation!.latitude,
+            _currentLocation!.longitude,
+            restaurant.latitude,
+            restaurant.longitude,
+          ) /
+          1000; // Convert to kilometers
+      return distance;
+    } catch (e) {
+      // Handle any exceptions that may occur during distance calculation
+      return null; // Invalid distance
+    }
+  }
+
+  double? getDistanceSync(Restaurant restaurant) {
+    return _restaurantDistances[restaurant.id];
+  }
+
+  // Get distance from server (more accurate with road and terrain)
+  Future<double?> getDistance(Restaurant restaurant) async {
+    _isLoading = true;
     notifyListeners();
     try {
-      final permission = await Geolocator.requestPermission();
-      hasPermission = (permission == LocationPermission.always ||
-          permission == LocationPermission.whileInUse);
-      if (hasPermission) {
-        _currentLocation = await Geolocator.getCurrentPosition();
-        _error = null;
-      } else {
-        _error = 'Location permissions are not granted.';
-      }
-      notifyListeners();
+      await refreshLocation();
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      // Failed to get location
     }
-    finally{
-      loading = false;
+
+    if (_currentLocation == null) {
+      _isLoading = false;
       notifyListeners();
+      return null; // Failed to get location
     }
-  }
 
-  // Open app settings to let user manually enable permissions
-  Future openAppSettings() async {
-    await Geolocator.openAppSettings();
-  }
-
-  // Open location settings to let user enable location services
-  Future openLocationSettings() async {
-    await Geolocator.openLocationSettings();
-  }
-
-  // Calculate distance between current location and destination
-  double calculateDistance(double destLatitude, double destLongitude) {
-    if (_currentLocation == null) return 0;
-
-    return Geolocator.distanceBetween(
-          _currentLocation!.latitude,
-          _currentLocation!.longitude,
-          destLatitude,
-          destLongitude,
-        ) /
-        1000; // Convert to km
-  }
-
-  // Open Google Maps with directions
-  Future openGoogleMapWithDestination(double lat, double lng) async {
-    try {
-      final Uri googleMapsUrl = Uri.parse(
-        'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving',
-      );
-
-      if (await canLaunchUrl(googleMapsUrl)) {
-        await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
-      } else {
-        throw 'Could not launch Google Maps.';
-      }
-    } catch (e) {
-      _error = 'Error opening Google Maps: $e';
-      notifyListeners();
-      print(_error);
-    }
-  }
-
-  // Clear any errors
-  void clearError() {
-    _error = null;
+    // Calculate distance locally
+    final distance = calculateDistance(restaurant);
+    _restaurantDistances[restaurant.id] = distance;
+    _isLoading = false;
     notifyListeners();
+    return distance;
+  }
+
+  // Format distance for display
+  String formatDistance(double distance) {
+    if (distance < 1) {
+      final meters = (distance * 1000).round();
+      return '$meters m';
+    } else if (distance < 10) {
+      return '${distance.toStringAsFixed(1)} km';
+    } else {
+      return '${distance.round()} km';
+    }
   }
 }

@@ -1,196 +1,224 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:shopspot/models/restaurant_product_model.dart';
+import 'package:shopspot/providers/location_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:shopspot/providers/connectivity_provider.dart';
+import 'package:shopspot/providers/product_provider.dart';
+import 'package:shopspot/models/restaurant_model.dart';
+import 'package:shopspot/services/api_service.dart';
 import 'package:shopspot/services/database_service.dart';
-import 'package:shopspot/utils/app_colors.dart';
-import '../models/restaurant.dart';
-import '../services/api_service.dart';
+import 'package:shopspot/services/connectivity_service.dart';
 
-class RestaurantProvider with ChangeNotifier {
+class RestaurantProvider extends ChangeNotifier {
   List<Restaurant> _restaurants = [];
-  List<Restaurant> _allRestaurants = [];
-
-  // Cache for product-restaurant relationships
-  Map<int, List<Restaurant>> _productRestaurantsCache = {};
-
-  // Track which products are currently loading
-  Map<int, bool> _loadingProductRestaurants = {};
-
+  final Map<int, bool> _isLoadingProductRestaurants = {};
   bool _isLoading = false;
-  String? _errorProducts;
-  bool _isCacheInitialized = false;
+  String? _error;
+  String? _productsError;
+  bool _hasBeenInitialized = false;
 
   List<Restaurant> get restaurants => _restaurants;
   bool get isLoading => _isLoading;
-  String? get errorProducts => _errorProducts;
+  String? get error => _error;
+  String? get productsError => _productsError;
+  bool get hasBeenInitialized => _hasBeenInitialized;
 
-  RestaurantProvider();
-
-  // Initialize cache from Hive storage
-  Future<void> _initializeCache() async {
-    if (_isCacheInitialized) return;
-
-    _productRestaurantsCache =
-        await DatabaseService.getProductRestaurantCache();
-    _isCacheInitialized = true;
+  // Set loading state manually
+  void setLoading(bool value) {
+    _isLoading = value;
     notifyListeners();
-    debugPrint(
-        'Restaurant provider cache initialized with ${_productRestaurantsCache.length} entries');
   }
 
-  Future<void> fetchRestaurants(BuildContext context) async {
+  // Initialize provider and load restaurants with context awareness
+  Future<void> initialize(BuildContext context) async {
+    await fetchData(context);
+  }
+
+  // Fetch restaurants with context awareness
+  Future<bool> fetchData(BuildContext context) async {
     _isLoading = true;
     notifyListeners();
 
-    try {
-      final connectivityProvider =
-          Provider.of<ConnectivityProvider>(context, listen: false);
-      final shouldLoadFromServer =
-          connectivityProvider.isOnline && connectivityProvider.shouldRefresh;
+    // Extract connectivity service
+    final connectivityService =
+        Provider.of<ConnectivityService>(context, listen: false);
 
-      if (shouldLoadFromServer) {
-        final result = await ApiService.getRestaurants();
+    // Always check cached restaurants availability first
+    final cachedRestaurants = DatabaseService.getAllRestaurants();
+    final hasCachedData = cachedRestaurants.isNotEmpty;
+
+    // Always check server availability with a short timeout
+    final serverIsAvailable = await ApiService.isApiAccessible();
+    Map<String, dynamic> result = {};
+
+    try {
+      // SERVER DATA NEEDED: If we should use server data and server is available
+      if (serverIsAvailable) {
+        // Reset server status since it's available
+        connectivityService.resetServerStatus();
+        result = await ApiService.getRestaurants();
 
         if (result['success']) {
-          _allRestaurants = result['restaurants'];
-          _restaurants = _allRestaurants;
+          // Convert API response to Restaurant objects
+          final List<dynamic> restaurantsData = result['restaurants'];
+          final List<Restaurant> serverRestaurants = restaurantsData
+              .map((restaurantData) => Restaurant.fromJson(restaurantData))
+              .toList();
 
-          await DatabaseService.cacheRestaurants(_allRestaurants);
+          // Save to database and update state
+          await DatabaseService.clearDatabase();
+          await DatabaseService.saveRestaurants(serverRestaurants);
+          _restaurants = serverRestaurants;
+          _error = null;
 
-          // We don't clear the product-restaurants cache here
-          // as it might still be useful even with new restaurant data
-        } else {
-          throw Exception(result['message']);
+          // Mark as refreshed if connectivity service is available
+          connectivityService.markRefreshed();
+
+          // Update location provider with new restaurants
+          if (context.mounted) refreshRestaurantsDistances(context);
+
+          return true;
         }
-        // Mark as refreshed
-        connectivityProvider.markRefreshed();
-      } else {
-        debugPrint('load restaurants from cache');
-        if (!connectivityProvider.isOnline) {
-          // Show toast if we're offline
-          Fluttertoast.showToast(
-            msg: "You are offline. Showing cached Restaurants data.",
-            backgroundColor: AppColors.error,
-          );
-        }
-        await Future.delayed(const Duration(microseconds: 500));
-        _allRestaurants = await DatabaseService.getCachedRestaurants();
-        _restaurants = _allRestaurants;
       }
-    } catch (e) {
-      debugPrint(e.toString());
-      Fluttertoast.showToast(
-        msg: "Unable to fetch Restaurants. Showing cached data.",
-        backgroundColor: AppColors.error,
-      );
-      _allRestaurants = await DatabaseService.getCachedRestaurants();
-      _restaurants = _allRestaurants;
     } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
+      if (!serverIsAvailable || (serverIsAvailable && !result['success'])) {
+        if (hasCachedData) {
+          _restaurants = cachedRestaurants;
+          _error = null; // Don't show error if we have cached data
 
-  void search(String query) {
-    _restaurants = _allRestaurants
-        .where((r) => r.name.toLowerCase().contains(query.toLowerCase()))
-        .toList();
-    notifyListeners();
-  }
-
-  // New method to check if restaurants are being loaded for a specific product
-  bool isLoadingProductRestaurants(int productId) {
-    return _loadingProductRestaurants[productId] ?? false;
-  }
-
-  // New method to get already loaded restaurants without triggering a new load
-  List<Restaurant>? getLoadedRestaurantsForProduct(int productId) {
-    return _productRestaurantsCache[productId];
-  }
-
-  // New method to trigger loading restaurants for a product
-  void loadRestaurantsForProduct(BuildContext context, int productId) {
-    // Check if we have already loaded this product's restaurants
-    if (_productRestaurantsCache.containsKey(productId)) {
-      debugPrint('Already have restaurants for product $productId');
-      return;
-    }
-
-    // Check if we're already loading restaurants for this product
-    if (_loadingProductRestaurants[productId] == true) {
-      debugPrint('Already loading restaurants for product $productId');
-      return;
-    }
-
-    // Start loading restaurants
-    _loadingProductRestaurants[productId] = true;
-    notifyListeners();
-
-    getRestaurantsForProduct(context, productId).then((_) {
-      _loadingProductRestaurants[productId] = false;
-      notifyListeners();
-    });
-  }
-
-  // Original method kept for compatibility
-  Future<List<Restaurant>> getRestaurantsForProduct(
-      BuildContext context, int productId) async {
-    if (!_isCacheInitialized) {
-      await _initializeCache();
-    }
-
-    final connectivityProvider =
-        Provider.of<ConnectivityProvider>(context, listen: false);
-    final shouldLoadFromServer =
-        connectivityProvider.isOnline && connectivityProvider.shouldRefresh;
-
-    if (!shouldLoadFromServer) {
-      if (_productRestaurantsCache.containsKey(productId)) {
-        debugPrint('Using cached restaurants for product $productId');
-        return _productRestaurantsCache[productId]!;
+          // Show toast if connectivity service available
+          if (context.mounted) {
+            Fluttertoast.showToast(
+              msg: 'Unable to connect to the server. Using cached data.',
+              backgroundColor: Colors.orange,
+            );
+          }
+        } else {
+          _error = connectivityService.isOnline
+              ? 'Unable to connect to the server. Please try again later.'
+              : 'You are offline. Please check your connection.';
+        }
       }
+
+      // Update location provider with new restaurants
+      if (context.mounted) refreshRestaurantsDistances(context);
+
+      _isLoading = false;
+      _hasBeenInitialized = true;
+      notifyListeners();
     }
 
-    debugPrint('Fetching restaurants for product $productId from API');
+    return false;
+  }
+
+  // Refresh restaurants from API
+  Future<bool> refreshRestaurants(BuildContext context) async {
+    Provider.of<ProductProvider>(context, listen: false).fetchData(context);
+    return await fetchData(context);
+  }
+
+  // Refresh restaurants distances
+  Future<void> refreshRestaurantsDistances(BuildContext context) async {
+    final locationProvider =
+        Provider.of<LocationProvider>(context, listen: false);
+    for (var restaurant in _restaurants) {
+      await locationProvider.getDistance(restaurant);
+    }
+  }
+
+  // Search restaurants by name
+  List<Restaurant> searchRestaurants(String query) {
+    if (query.isEmpty) {
+      return _restaurants;
+    }
+
+    final searchTerm = query.toLowerCase();
+    return _restaurants
+        .where((restaurant) =>
+            restaurant.name.toLowerCase().contains(searchTerm) ||
+            restaurant.description.toLowerCase().contains(searchTerm))
+        .toList();
+  }
+
+  // Update the favorite status of a restaurant in the list
+  Future<void> updateFavoriteStatus(int restaurantId, bool isFavorite) async {
+    await DatabaseService.changeFavoriteState(restaurantId, isFavorite);
+
+    // Find the restaurant in the list
+    final restaurantIndex =
+        _restaurants.indexWhere((restaurant) => restaurant.id == restaurantId);
+
+    // If the restaurant exists in our list, update its favorite status
+    if (restaurantIndex != -1) {
+      _restaurants[restaurantIndex].isFavorite = isFavorite;
+    }
+
+    // Always notify listeners to ensure UI is updated
+    notifyListeners();
+  }
+
+  // Get the loading state for a specific restaurant
+  bool isLoadingProductRestaurants(int productId) {
+    return _isLoadingProductRestaurants[productId] ?? false;
+  }
+
+  // Get a restaurant by ID
+  Future<List<Restaurant>> getRestaurantsByProductId(
+      BuildContext context, int productId) async {
+    _isLoadingProductRestaurants[productId] = true;
+    notifyListeners();
+
+    final connectivityService =
+        Provider.of<ConnectivityService>(context, listen: false);
+    final restaurants = DatabaseService.getRestaurantsByProductId(productId);
+    if (restaurants.isNotEmpty) {
+      _productsError = null;
+      _isLoadingProductRestaurants[productId] = false;
+      notifyListeners();
+      return restaurants;
+    }
+
+    // If no restaurant found, get it from the API
+    final serverIsAvailable = await ApiService.isApiAccessible();
+    Map<String, dynamic> result = {};
 
     try {
-      final result = await ApiService.getProductRestaurants(productId);
+      // SERVER DATA NEEDED: If we should use server data and server is available
+      if (serverIsAvailable) {
+        // Reset server status since it's available
+        connectivityService.resetServerStatus();
+        result = await ApiService.getRestaurantsByProductId(productId);
 
-      if (result['success']) {
-        final restaurants = result['restaurants'] as List<Restaurant>;
+        if (result['success']) {
+          // Convert API response to Restaurant objects
+          final List<dynamic> restaurantsData = result['restaurants'];
+          final List<Restaurant> serverRestaurants = restaurantsData
+              .map((restaurantData) => Restaurant.fromJson(restaurantData))
+              .toList();
+          final List<RestaurantProduct> relations = restaurantsData
+              .map((restaurantData) =>
+                  RestaurantProduct.fromJson(restaurantData['pivot']))
+              .toList();
 
-        _productRestaurantsCache[productId] = restaurants;
+          // Save to database and update state
+          await DatabaseService.saveRestaurantProducts(relations);
 
-        await DatabaseService.cacheProductRestaurantRelations(
-            _productRestaurantsCache);
-        // Mark as refreshed
-        connectivityProvider.markRefreshed();
-        notifyListeners();
-        return restaurants;
-      } else {
-        _errorProducts = result['message'];
-        notifyListeners();
-        return [];
+          // Mark as refreshed if connectivity service is available
+          connectivityService.markRefreshed();
+
+          _productsError = null;
+          return serverRestaurants;
+        }
       }
-    } catch (e) {
-      _errorProducts = e.toString();
+    } finally {
+      if (!serverIsAvailable || (serverIsAvailable && !result['success'])) {
+        _productsError = connectivityService.isOnline
+            ? 'Unable to connect to the server. Please try again later.'
+            : 'You are offline. Please check your connection.';
+      }
+      _isLoadingProductRestaurants[productId] = false;
       notifyListeners();
-      return [];
     }
-  }
-
-  void clearSearch() {
-    _restaurants = _allRestaurants;
-    notifyListeners();
-  }
-
-  // Method to clear the restaurant-product cache
-  Future<void> clearProductRestaurantsCache() async {
-    _productRestaurantsCache.clear();
-    _loadingProductRestaurants.clear();
-    await DatabaseService.clearProductRestaurantCache();
-    notifyListeners();
-    debugPrint('Product-Restaurant cache cleared');
+    return [];
   }
 }

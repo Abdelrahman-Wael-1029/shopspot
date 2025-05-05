@@ -25,14 +25,13 @@ class UserAdapter extends TypeAdapter<User> {
       profilePhoto: fields[5] as String?,
       profilePhotoUrl: fields[6] as String?,
       token: fields[7] as String?,
-      lastSyncTime: fields[8] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, User obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -48,9 +47,7 @@ class UserAdapter extends TypeAdapter<User> {
       ..writeByte(6)
       ..write(obj.profilePhotoUrl)
       ..writeByte(7)
-      ..write(obj.token)
-      ..writeByte(8)
-      ..write(obj.lastSyncTime);
+      ..write(obj.token);
   }
 
   @override

@@ -9,4 +9,4 @@ class IndexProvider extends ChangeNotifier {
     _currentIndex = index;
     notifyListeners();
   }
-} 
+}

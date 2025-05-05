@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:provider/provider.dart';
 import 'package:shopspot/utils/app_routes.dart';
-import '../../providers/auth_provider.dart';
-import '../../utils/validator.dart';
-import '../../widgets/custom_button.dart';
-import '../../widgets/custom_text_field.dart';
+import 'package:shopspot/providers/auth_provider.dart';
+import 'package:shopspot/widgets/custom_button.dart';
+import 'package:shopspot/widgets/custom_text_field.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -52,36 +51,37 @@ class _SignupScreenState extends State<SignupScreen> {
       _confirmPasswordError = null;
 
       // Validate name (mandatory)
-      if (!Validator.isValidName(_nameController.text)) {
+      if (_nameController.text.isEmpty) {
         _nameError = 'Name is required';
         isValid = false;
       }
 
       // Validate email (FCI email format validation)
-      if (Validator.isNullOrEmpty(_emailController.text)) {
+      if (_emailController.text.isEmpty) {
         _emailError = 'Email is required';
         isValid = false;
-      } else if (!Validator.isValidFciEmail(_emailController.text)) {
-        _emailError = 'Invalid FCI email format (studentID@stud.fci-cu.edu.eg)';
+      } else if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+          .hasMatch(_emailController.text)) {
+        _emailError = 'Invalid email format';
         isValid = false;
       }
 
       // Validate password (at least 8 characters with 1 number)
-      if (Validator.isNullOrEmpty(_passwordController.text)) {
+      if (_passwordController.text.isEmpty) {
         _passwordError = 'Password is required';
         isValid = false;
-      } else if (!Validator.isValidPassword(_passwordController.text)) {
+      } else if (_passwordController.text.length < 8 ||
+          !RegExp(r'\d').hasMatch(_passwordController.text)) {
         _passwordError =
             'Password must be at least 8 characters with at least 1 number';
         isValid = false;
       }
 
       // Validate confirm password (must match password)
-      if (Validator.isNullOrEmpty(_confirmPasswordController.text)) {
+      if (_confirmPasswordController.text.isEmpty) {
         _confirmPasswordError = 'Confirm password is required';
         isValid = false;
-      } else if (!Validator.passwordsMatch(
-          _passwordController.text, _confirmPasswordController.text)) {
+      } else if (_passwordController.text != _confirmPasswordController.text) {
         _confirmPasswordError = 'Passwords do not match';
         isValid = false;
       }
@@ -115,7 +115,10 @@ class _SignupScreenState extends State<SignupScreen> {
       );
 
       if (mounted) {
-        Navigator.pushReplacementNamed(context, AppRoutes.home);
+        Navigator.pushReplacementNamed(
+          context,
+          AppRoutes.restaurants,
+        );
       }
     } else {
       if (mounted) {
@@ -159,26 +162,16 @@ class _SignupScreenState extends State<SignupScreen> {
           });
 
           // Set a more user-friendly error message for the toast
-          if (validationErrors.containsKey('student_id') &&
-              validationErrors['student_id'][0]
-                  .contains("has already been taken")) {
-            errorMessage =
-                "Student ID already registered. Please use a different ID.";
-          } else if (validationErrors.containsKey('email') &&
+          if (validationErrors.containsKey('email') &&
               validationErrors['email'][0].contains("has already been taken")) {
             errorMessage =
                 "Email already registered. Please use a different email.";
-          } else {
-            errorMessage = "Please check the highlighted fields for errors.";
           }
         }
 
         Fluttertoast.showToast(
           msg: errorMessage,
-          toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.BOTTOM,
           backgroundColor: Colors.red,
-          textColor: Colors.white,
         );
       }
     }
@@ -236,12 +229,9 @@ class _SignupScreenState extends State<SignupScreen> {
 
               CustomTextField(
                 controller: _emailController,
-                labelText: 'Email (FCI Email) *',
+                labelText: 'Email *',
                 errorText: _emailError,
                 keyboardType: TextInputType.emailAddress,
-                onChanged: (value) {
-                  // Auto-extract student ID from email
-                },
               ),
 
               // Level dropdown
@@ -314,8 +304,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: 20),
 
-              // 
-              // link
+              // Login link
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

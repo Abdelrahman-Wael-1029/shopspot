@@ -1,11 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:shopspot/providers/favorite_provider.dart';
+import 'package:shopspot/providers/restaurant_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:shopspot/providers/connectivity_provider.dart';
-import '../models/user_model.dart';
-import '../services/api_service.dart';
-import '../services/database_service.dart';
+import 'package:shopspot/models/user_model.dart';
+import 'package:shopspot/services/api_service.dart';
+import 'package:shopspot/services/database_service.dart';
+import 'package:shopspot/services/connectivity_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   User? _user;
@@ -40,7 +42,10 @@ class AuthProvider extends ChangeNotifier {
       if (result['success']) {
         _user = DatabaseService.getCurrentUser();
         success = true;
-        if (context.mounted) {}
+        if (context.mounted) {
+          Provider.of<RestaurantProvider>(context, listen: false)
+              .refreshRestaurants(context);
+        }
       } else {
         _error = result['message'];
         _validationErrors = result['errors'] as Map<String, dynamic>?;
@@ -75,7 +80,6 @@ class AuthProvider extends ChangeNotifier {
       final hasInternet = await ApiService.isApiAccessible();
       if (!hasInternet) {
         _error = 'Unable to connect to the server. Please try again later.';
-        print('unable to register');
         return false;
       }
 
@@ -91,7 +95,10 @@ class AuthProvider extends ChangeNotifier {
       if (result['success']) {
         _user = DatabaseService.getCurrentUser();
         success = true;
-        if (context.mounted) {}
+        if (context.mounted) {
+          Provider.of<RestaurantProvider>(context, listen: false)
+              .refreshRestaurants(context);
+        }
       } else {
         _error = result['message'];
         _validationErrors = result['errors'] as Map<String, dynamic>?;
@@ -112,13 +119,12 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      Provider.of<FavoriteProvider>(context, listen: false).clearAllFavorites();
       // Try to logout from server if we have internet
       final hasInternet = await ApiService.isApiAccessible();
       if (hasInternet) {
         await ApiService.logout();
       }
-    } catch (e) {
-      // Continue with local logout even if server logout fails
     } finally {
       // Always clear local data regardless of server response
       await DatabaseService.deleteCurrentUser();
@@ -134,8 +140,8 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final connectivityProvider =
-        Provider.of<ConnectivityProvider>(context, listen: false);
+    final connectivityService =
+        Provider.of<ConnectivityService>(context, listen: false);
 
     // Check if local user data exists
     final localUser = DatabaseService.getCurrentUser();
@@ -149,7 +155,7 @@ class AuthProvider extends ChangeNotifier {
       // If server is available, determine if we should use server data
       if (serverIsAvailable) {
         // Reset server status since it's available
-        connectivityProvider.resetServerStatus();
+        connectivityService.resetServerStatus();
         result = await ApiService.getProfile();
 
         if (result['success']) {
@@ -157,15 +163,11 @@ class AuthProvider extends ChangeNotifier {
           _error = null;
 
           // Mark as refreshed
-          connectivityProvider.markRefreshed();
+          connectivityService.markRefreshed();
 
-          _isLoading = false;
-          notifyListeners();
           return;
         }
       }
-    } catch (e) {
-      // Do nothing
     } finally {
       if (!serverIsAvailable || (serverIsAvailable && !result['success'])) {
         if (hasLocalData) {

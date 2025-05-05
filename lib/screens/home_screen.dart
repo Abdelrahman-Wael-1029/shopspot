@@ -1,31 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shopspot/providers/product_provider.dart';
-import 'package:shopspot/providers/restaurant_provider.dart';
-import 'package:shopspot/screens/auth/profile_screen.dart';
-import '../providers/index_provider.dart';
-import 'restaurants_screen.dart';
-import 'search_screen.dart';
+import 'package:shopspot/providers/index_provider.dart';
+import 'package:shopspot/screens/restaurants_list_screen.dart';
+import 'package:shopspot/screens/favorites_screen.dart';
+import 'package:shopspot/screens/products_search_screen.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  @override
-  void initState() {
-    super.initState();
-
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-      Provider.of<RestaurantProvider>(context, listen: false)
-          .fetchRestaurants(context);
-      Provider.of<ProductProvider>(context, listen: false)
-          .fetchProducts(context);
-    });
-  }
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -35,9 +16,9 @@ class _HomeScreenState extends State<HomeScreen> {
           body: IndexedStack(
             index: indexProvider.currentIndex,
             children: [
-              RestaurantsScreen(),
-              const SearchScreen(),
-              const ProfileScreen(),
+              const RestaurantsListScreen(),
+              const FavoritesScreen(),
+              const ProductsSearchScreen(),
             ],
           ),
           bottomNavigationBar: BottomNavigationBar(
@@ -49,12 +30,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 label: 'Restaurants',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.search),
-                label: 'Search',
+                icon: Icon(Icons.favorite),
+                label: 'Favorites',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.person),
-                label: 'Profile',
+                icon: Icon(Icons.search),
+                label: 'Search',
               ),
             ],
           ),

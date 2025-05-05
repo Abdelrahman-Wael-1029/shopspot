@@ -18,14 +18,13 @@ class CustomSearch extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: TextField(
-        // on tap outside the search field, unfocus the keyboard
         onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
         controller: searchController,
         decoration: InputDecoration(
           hintText: hintText,
           prefixIcon: const Icon(Icons.search),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
           ),
           suffixIcon: searchController.text.isNotEmpty
               ? IconButton(

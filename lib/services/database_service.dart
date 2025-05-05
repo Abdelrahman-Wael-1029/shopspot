@@ -1,25 +1,23 @@
 import 'dart:io';
-import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
-import 'package:shopspot/models/product.dart';
-import 'package:shopspot/models/product_restaurant_cache.dart';
-import 'package:shopspot/models/restaurant.dart';
-import 'package:shopspot/models/restaurant_product_cache.dart';
-import '../models/user_model.dart';
+import 'package:shopspot/models/user_model.dart';
+import 'package:shopspot/models/restaurant_model.dart';
+import 'package:shopspot/models/product_model.dart';
+import 'package:shopspot/models/restaurant_product_model.dart';
 
 class DatabaseService {
   static const String _userBoxName = 'userBox';
+  static const String _restaurantsBoxName = 'restaurantsBox';
+  static const String _productsBoxName = 'productsBox';
+  static const String _restaurantProductsBoxName = 'restaurantProductsBox';
   static const String _currentUserKey = 'currentUser';
   static const String _profileImageFolderName = 'profile_images';
-  static const String _productsBox = 'products_box';
-  static const String _restaurantsBox = 'restaurants_box';
-  static const String _productRestaurantCacheBox =
-      'product_restaurant_cache_box';
-  static const String _productRestaurantCacheKey = 'product_restaurant_cache';
   static Box<User>? _userBox;
-  static const String _restaurantProductCacheBox = 'restaurantProductCacheBox';
+  static Box<Restaurant>? _restaurantsBox;
+  static Box<Product>? _productsBox;
+  static Box<RestaurantProduct>? _restaurantProductsBox;
 
   /// Initialize Hive and open all boxes
   static Future<void> init() async {
@@ -30,15 +28,14 @@ class DatabaseService {
     Hive.registerAdapter(UserAdapter());
     Hive.registerAdapter(RestaurantAdapter());
     Hive.registerAdapter(ProductAdapter());
-    Hive.registerAdapter(ProductRestaurantCacheAdapter());
-    Hive.registerAdapter(RestaurantProductCacheAdapter());
+    Hive.registerAdapter(RestaurantProductAdapter());
 
     // Open boxes
     _userBox = await Hive.openBox<User>(_userBoxName);
-    await Hive.openBox<Product>(_productsBox);
-    await Hive.openBox<Restaurant>(_restaurantsBox);
-    await Hive.openBox<ProductRestaurantCache>(_productRestaurantCacheBox);
-    await Hive.openBox<RestaurantProductCache>(_restaurantProductCacheBox);
+    _restaurantsBox = await Hive.openBox<Restaurant>(_restaurantsBoxName);
+    _productsBox = await Hive.openBox<Product>(_productsBoxName);
+    _restaurantProductsBox =
+        await Hive.openBox<RestaurantProduct>(_restaurantProductsBoxName);
   }
 
   /// Save current user to local database
@@ -87,6 +84,7 @@ class DatabaseService {
       // Check if URL has changed
       final currentUser = getCurrentUser();
 
+      // If the URL is the same as what we already have restaurantd locally, reuse the existing image
       if (currentUser?.profilePhotoUrl == imageUrl &&
           currentUser?.profilePhoto != null &&
           File(currentUser!.profilePhoto!).existsSync()) {
@@ -128,173 +126,155 @@ class DatabaseService {
     }
   }
 
-  // Save products to local Hive storage
-  static Future<void> cacheProducts(List<Product> products) async {
-    final box = await Hive.openBox<Product>(_productsBox);
-    await box.clear(); // Clear old data before saving new data
-    await box.addAll(products);
-  }
+  // Restaurant methods
 
-  // Get cached products from Hive
-  static Future<List<Product>> getCachedProducts() async {
-    final box = await Hive.openBox<Product>(_productsBox);
-    return box.values.toList();
-  }
-
-  // Save restaurants to local Hive storage
-  static Future<void> cacheRestaurants(List<Restaurant> restaurants) async {
-    final box = await Hive.openBox<Restaurant>(_restaurantsBox);
-    await box.clear(); // Clear old data before saving new data
-    await box.addAll(restaurants);
-  }
-
-  // Get cached restaurants from Hive
-  static Future<List<Restaurant>> getCachedRestaurants() async {
-    final box = await Hive.openBox<Restaurant>(_restaurantsBox);
-    return box.values.toList();
-  }
-
-  static Future<void> cacheProductRestaurants(
-      int productId, List<Restaurant> restaurants) async {
-    try {
-      final box = await Hive.openBox('product_restaurants');
-
-      // Store the serialized restaurants with a key based on the product ID
-      await box.put('product_$productId',
-          restaurants.map((restaurant) => restaurant.toJson()).toList());
-    } catch (e) {
-      debugPrint('Error caching product restaurants in Hive: $e');
+  /// Save restaurants to local database
+  static Future<void> saveRestaurants(List<Restaurant> restaurants) async {
+    // Save all restaurants
+    for (var restaurant in restaurants) {
+      await _restaurantsBox?.put(restaurant.id, restaurant);
     }
   }
 
-// Get cached restaurants for a specific product from Hive
-  static Future<List<Restaurant>?> getCachedProductRestaurants(
-      int productId) async {
-    try {
-      final box = await Hive.openBox('product_restaurants');
-
-      // Check if we have data for this product
-      if (!box.containsKey('product_$productId')) {
-        return null;
-      }
-
-      // Retrieve and deserialize the data
-      final restaurantsData = box.get('product_$productId') as List;
-      return restaurantsData
-          .map((restaurantData) =>
-              Restaurant.fromJson(Map<String, dynamic>.from(restaurantData)))
-          .toList();
-    } catch (e) {
-      debugPrint('Error getting cached product restaurants from Hive: $e');
-      return null;
+  /// Delete all relations with a restaurant
+  static Future<void> deleteRestaurantRelations(int restaurantId) async {
+    // Delete all relations with the restaurant
+    final relations = getRelationsByRestaurantId(restaurantId);
+    for (var relation in relations) {
+      await _restaurantProductsBox?.delete(relation.uniqueKey);
     }
   }
 
-  // Product-Restaurant relationship caching
-  static Future<void> cacheProductRestaurantRelations(
-      Map<int, List<Restaurant>> productRestaurantsCache) async {
-    final box =
-        await Hive.openBox<ProductRestaurantCache>(_productRestaurantCacheBox);
-
-    // Convert the Map<int, List<Restaurant>> to Map<String, List<int>>
-    // because Hive works better with primitive types
-    final Map<String, List<int>> serializableMap = {};
-
-    productRestaurantsCache.forEach((productId, restaurants) {
-      // Store restaurant IDs instead of full objects
-      serializableMap[productId.toString()] =
-          restaurants.map((r) => r.id).toList();
-    });
-
-    final cacheObject =
-        ProductRestaurantCache(productRestaurantsMap: serializableMap);
-    await box.put(_productRestaurantCacheKey, cacheObject);
-    await box.close();
+  /// Delete all restaurants and products from local database
+  static Future<void> clearDatabase() async {
+    // Delete all restaurants
+    await _restaurantsBox?.clear();
+    // Delete all restaurant products
+    await _restaurantProductsBox?.clear();
+    // Delete all products
+    await _productsBox?.clear();
   }
 
-  static Future<Map<int, List<Restaurant>>> getProductRestaurantCache() async {
-    final box =
-        await Hive.openBox<ProductRestaurantCache>(_productRestaurantCacheBox);
-    final cacheObject = box.get(_productRestaurantCacheKey);
-    final Map<int, List<Restaurant>> result = {};
-
-    if (cacheObject != null) {
-      // First, get all restaurants to use for lookup
-      final allRestaurants = await getCachedRestaurants();
-      final Map<int, Restaurant> restaurantMap = {};
-      for (var restaurant in allRestaurants) {
-        restaurantMap[restaurant.id] = restaurant;
-      }
-
-      // Convert back from Map<String, List<int>> to Map<int, List<Restaurant>>
-      cacheObject.productRestaurantsMap.forEach((productIdStr, restaurantIds) {
-        final productId = int.parse(productIdStr);
-        final List<Restaurant> restaurantsForProduct = [];
-
-        for (var restaurantId in restaurantIds) {
-          if (restaurantMap.containsKey(restaurantId)) {
-            restaurantsForProduct.add(restaurantMap[restaurantId]!);
-          }
-        }
-
-        result[productId] = restaurantsForProduct;
-      });
-    }
-
-    await box.close();
-    return result;
+  /// Get all restaurants from local database
+  static List<Restaurant> getAllRestaurants() {
+    return _restaurantsBox?.values.toList() ?? [];
   }
 
-  static Future<void> clearProductRestaurantCache() async {
-    final box =
-        await Hive.openBox<ProductRestaurantCache>(_productRestaurantCacheBox);
-    await box.clear();
-    await box.close();
+  /// Get a restaurant by ID
+  static Restaurant? getRestaurant(int restaurantId) {
+    return _restaurantsBox?.get(restaurantId);
   }
 
-  static Future<void> cacheProductsForRestaurant(
-      int restaurantId, List<Product> products) async {
-    try {
-      final box = Hive.box<RestaurantProductCache>(_restaurantProductCacheBox);
-      final productIds = products.map((p) => p.id).toList();
+  /// Get restaurants by product ID
+  static List<Restaurant> getRestaurantsByProductId(int productId) {
+    return getRelationsByProductId(productId)
+        .map((relation) => getRestaurant(relation.restaurantId))
+        .whereType<Restaurant>()
+        .toList();
+  }
 
-      await box.put(
-        restaurantId.toString(),
-        RestaurantProductCache(productIds: productIds),
-      );
+  /// Get relations by restaurant ID
+  static List<RestaurantProduct> getRelationsByRestaurantId(int restaurantId) {
+    return _restaurantProductsBox?.values
+            .where((relation) => relation.restaurantId == restaurantId)
+            .toList() ??
+        [];
+  }
 
-      final productsBox = Hive.box<Product>(_productsBox);
-      for (var product in products) {
-        productsBox.put(product.id.toString(), product);
-      }
+  // Product methods
 
-      debugPrint('Cached products for restaurant $restaurantId');
-    } catch (e) {
-      debugPrint('Error caching products for restaurant $restaurantId: $e');
+  /// Save products to local database
+  static Future<void> saveProducts(List<Product> products) async {
+    // Save all products
+    for (var product in products) {
+      await _productsBox?.put(product.id, product);
     }
   }
 
-  static Future<List<Product>> getCachedProductsForRestaurant(
-      int restaurantId) async {
-    try {
-      final box = Hive.box<RestaurantProductCache>(_restaurantProductCacheBox);
-      final cache = box.get(restaurantId.toString());
+  /// Get all products from local database
+  static List<Product> getAllProducts() {
+    return _productsBox?.values.toList() ?? [];
+  }
 
-      if (cache == null) return [];
+  /// Get a product by ID
+  static Product? getProduct(int productId) {
+    return _productsBox?.get(productId);
+  }
 
-      final productsBox = Hive.box<Product>(_productsBox);
-      final products = <Product>[];
+  /// Get products by restaurant ID
+  static List<Product> getProductsByRestaurantId(int restaurantId) {
+    return getRelationsByRestaurantId(restaurantId)
+        .map((relation) => getProduct(relation.productId))
+        .whereType<Product>()
+        .toList();
+  }
 
-      for (var id in cache.productIds) {
-        final product = productsBox.get(id.toString());
-        if (product != null) products.add(product);
-      }
+  /// Get relations by product ID
+  static List<RestaurantProduct> getRelationsByProductId(int productId) {
+    return _restaurantProductsBox?.values
+            .where((relation) => relation.productId == productId)
+            .toList() ??
+        [];
+  }
 
-      return products;
-    } catch (e) {
-      debugPrint(
-          'Error loading cached products for restaurant $restaurantId: $e');
+  /// Save restaurant's products to local database
+  static Future<void> saveRestaurantProducts(
+      List<RestaurantProduct> relations) async {
+    final Map<String, RestaurantProduct> entries = {
+      for (var relation in relations) relation.uniqueKey: relation
+    };
+    await _restaurantProductsBox?.putAll(entries);
+  }
+
+  // Favorites methods
+
+  /// Add a restaurant to favorites
+  static Future<void> changeFavoriteState(
+      int restaurantId, bool isFavorite) async {
+    // Get the current user to check if we're logged in
+    final user = getCurrentUser();
+    if (user == null) {
+      return; // Don't add favorites if not logged in
+    }
+
+    // Update the isFavorite flag in the restaurant
+    final restaurant = getRestaurant(restaurantId);
+    if (restaurant != null) {
+      final updatedRestaurant = Restaurant.from(restaurant);
+      updatedRestaurant.isFavorite = isFavorite;
+      await _restaurantsBox?.put(restaurantId, updatedRestaurant);
+    }
+  }
+
+  /// Get all favorited restaurants
+  static List<Restaurant> getFavoriteRestaurants() {
+    // If not logged in, no favorites
+    if (getCurrentUser() == null) {
       return [];
+    }
+
+    // Filter restaurants where isFavorite is true
+    return getAllRestaurants()
+        .where((restaurant) => restaurant.isFavorite)
+        .toList();
+  }
+
+  /// Clear all favorites
+  static Future<void> clearAllFavorites() async {
+    // Get the current user to check if we're logged in
+    final user = getCurrentUser();
+    if (user == null) {
+      return; // Don't clear favorites if not logged in
+    }
+
+    // Update isFavorite flag in all restaurants
+    final restaurants = getAllRestaurants()
+        .where((restaurant) => restaurant.isFavorite)
+        .toList();
+    for (final restaurant in restaurants) {
+      final updatedRestaurant = Restaurant.from(restaurant);
+      updatedRestaurant.isFavorite = false;
+      await _restaurantsBox?.put(restaurant.id, updatedRestaurant);
     }
   }
 }

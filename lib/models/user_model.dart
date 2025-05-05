@@ -1,6 +1,6 @@
 import 'package:hive/hive.dart';
 
-part 'user_model.g.dart';
+part 'package:shopspot/models/user_model.g.dart';
 
 @HiveType(typeId: 0)
 class User extends HiveObject {
@@ -9,7 +9,7 @@ class User extends HiveObject {
   
   @HiveField(1)
   final String name;
-    
+  
   @HiveField(2)
   final String email;
   
@@ -27,9 +27,6 @@ class User extends HiveObject {
   
   @HiveField(7)
   final String? token;
-  
-  @HiveField(8)
-  final DateTime? lastSyncTime;
 
   User({
     this.id,
@@ -40,7 +37,6 @@ class User extends HiveObject {
     this.profilePhoto,
     this.profilePhotoUrl,
     this.token,
-    this.lastSyncTime,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -87,7 +83,6 @@ class User extends HiveObject {
       profilePhoto: profilePhoto ?? this.profilePhoto,
       profilePhotoUrl: profilePhotoUrl ?? this.profilePhotoUrl,
       token: token ?? this.token,
-      lastSyncTime: lastSyncTime ?? this.lastSyncTime,
     );
   }
 }

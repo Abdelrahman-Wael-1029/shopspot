@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:provider/provider.dart';
 import 'package:shopspot/utils/app_routes.dart';
-import '../../providers/auth_provider.dart';
-import '../../widgets/custom_button.dart';
-import '../../widgets/custom_text_field.dart';
+import 'package:shopspot/providers/auth_provider.dart';
+import 'package:shopspot/widgets/custom_button.dart';
+import 'package:shopspot/widgets/custom_text_field.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -39,9 +39,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (_emailController.text.isEmpty) {
         _emailError = 'Email is required';
         isValid = false;
-      } else if (!RegExp(r'^\d{8}@stud\.fci-cu\.edu\.eg$')
+      } else if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
           .hasMatch(_emailController.text)) {
-        _emailError = 'Invalid FCI email format (studentID@stud.fci-cu.edu.eg)';
+        _emailError = 'Invalid email format';
         isValid = false;
       }
 
@@ -75,7 +75,12 @@ class _LoginScreenState extends State<LoginScreen> {
         textColor: Colors.white,
       );
 
-      Navigator.pushReplacementNamed(context, AppRoutes.home);
+      if (mounted) {
+        Navigator.pushReplacementNamed(
+          context,
+          AppRoutes.restaurants,
+        );
+      }
     } else {
       if (mounted) {
         Fluttertoast.showToast(
@@ -184,7 +189,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   const Text("Don't have an account? "),
                   TextButton(
                     onPressed: () {
-                      Navigator.pushNamed(context, AppRoutes.signup);
+                      setState(() {
+                        _emailController.clear();
+                        _passwordController.clear();
+                        _emailError = null;
+                        _passwordError = null;
+                        _showPassword = false;
+                      });
+                      Navigator.pushNamed(
+                        context,
+                        AppRoutes.register,
+                      );
                     },
                     child: const Text('Sign Up'),
                   ),
