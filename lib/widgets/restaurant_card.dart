@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:shopspot/cubit/location_cubit/location_state.dart';
 import 'package:shopspot/utils/app_routes.dart';
 import 'package:shopspot/models/restaurant_model.dart';
-import 'package:shopspot/providers/location_provider.dart';
-import 'package:shopspot/services/connectivity_service.dart';
-import 'package:shopspot/providers/favorite_provider.dart';
-import 'package:shopspot/providers/restaurant_provider.dart';
+import 'package:shopspot/cubit/location_cubit/location_cubit.dart';
+import 'package:shopspot/services/connectivity_service/connectivity_service.dart';
+import 'package:shopspot/cubit/favorite_cubit/favorite_cubit.dart';
+import 'package:shopspot/cubit/restaurant_cubit/restaurant_cubit.dart';
 
 class RestaurantCardSkeleton extends StatelessWidget {
   const RestaurantCardSkeleton({super.key});
@@ -284,8 +285,7 @@ class _FavoriteButtonState extends State<FavoriteButton> {
 
   Future<void> _updateFavoriteStatus(isFavorite) async {
     // Check connectivity status first
-    final connectivityService =
-        Provider.of<ConnectivityService>(context, listen: false);
+    final connectivityService = context.read<ConnectivityService>();
 
     if (!connectivityService.isOnline) {
       // Show toast message when offline
@@ -312,28 +312,26 @@ class _FavoriteButtonState extends State<FavoriteButton> {
     });
 
     try {
-      // Get the favorite provider
-      final favoriteProvider =
-          Provider.of<FavoriteProvider>(context, listen: false);
+      // Get the favorite cubit
+      final favoriteCubit = context.read<FavoriteCubit>();
 
-      // Get the restaurant provider to update directly
-      final restaurantProvider =
-          Provider.of<RestaurantProvider>(context, listen: false);
+      // Get the restaurant cubit to update directly
+      final restaurantCubit = context.read<RestaurantCubit>();
 
       // Call the appropriate method directly based on current state with a timeout
       bool success = false;
       try {
         // Run the actual operation
         success =
-            await favoriteProvider.toggleFavorite(widget.restaurant, context);
+            await favoriteCubit.toggleFavorite(widget.restaurant, context);
       } catch (e) {
         success = false;
       }
 
-      // Force an explicit update of the restaurant provider only if successful
+      // Force an explicit update of the restaurant cubit only if successful
       if (success) {
-        // Update the restaurant provider with the new status
-        restaurantProvider.updateFavoriteStatus(
+        // Update the restaurant cubit with the new status
+        restaurantCubit.updateFavoriteStatus(
             widget.restaurant.id, !isFavorite // Toggle current state
             );
       } else {
@@ -368,10 +366,11 @@ class DistanceInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<LocationProvider>(
-      builder: (context, locationProvider, child) {
-        final distance = locationProvider.getDistanceSync(restaurant);
-        if (locationProvider.isLoading) {
+    return BlocBuilder<LocationCubit, LocationState>(
+      builder: (context, state) {
+        final locationCubit = context.read<LocationCubit>();
+        final distance = locationCubit.getDistanceSync(restaurant);
+        if (state is LocationLoading) {
           return Row(
             children: [
               SizedBox(
@@ -402,7 +401,7 @@ class DistanceInfo extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               Text(
-                locationProvider.formatDistance(distance),
+                locationCubit.formatDistance(distance),
                 style: const TextStyle(
                   fontSize: 12,
                   color: Colors.blue,

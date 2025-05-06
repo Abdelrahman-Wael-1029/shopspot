@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:provider/provider.dart';
+import 'package:shopspot/cubit/auth_cubit/auth_state.dart';
 import 'package:shopspot/utils/app_routes.dart';
-import 'package:shopspot/providers/auth_provider.dart';
+import 'package:shopspot/cubit/auth_cubit/auth_cubit.dart';
 import 'package:shopspot/widgets/custom_button.dart';
 import 'package:shopspot/widgets/custom_text_field.dart';
 
@@ -58,9 +59,9 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     if (!_validateInputs()) return;
 
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final authCubit = context.read<AuthCubit>();
 
-    final success = await authProvider.login(
+    final success = await authCubit.login(
       context,
       _emailController.text,
       _passwordController.text,
@@ -84,8 +85,9 @@ class _LoginScreenState extends State<LoginScreen> {
     } else {
       if (mounted) {
         Fluttertoast.showToast(
-          msg: authProvider.error ??
-              "Unable to sign in. Please check your credentials and try again.",
+          msg: authCubit.state is AuthError
+              ? (authCubit.state as AuthError).message
+              : "Login failed",
           toastLength: Toast.LENGTH_LONG,
           gravity: ToastGravity.BOTTOM,
           backgroundColor: Colors.red,
@@ -97,7 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
+    final authCubit = context.read<AuthCubit>();
 
     return Scaffold(
       appBar: AppBar(
@@ -177,7 +179,7 @@ class _LoginScreenState extends State<LoginScreen> {
               CustomButton(
                 text: 'Login',
                 onPressed: _login,
-                isLoading: authProvider.isLoading,
+                isLoading: authCubit.state is AuthLoading,
               ),
 
               const SizedBox(height: 20),

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shopspot/cubit/restaurant_cubit/restaurant_state.dart';
+import 'package:shopspot/services/connectivity_service/connectivity_state.dart';
 import 'package:shopspot/utils/app_routes.dart';
 import 'package:shopspot/widgets/custom_search.dart';
-import 'package:shopspot/providers/restaurant_provider.dart';
-import 'package:shopspot/services/connectivity_service.dart';
+import 'package:shopspot/cubit/restaurant_cubit/restaurant_cubit.dart';
+import 'package:shopspot/services/connectivity_service/connectivity_service.dart';
 import 'package:shopspot/widgets/restaurant_card.dart';
 
 class RestaurantsListScreen extends StatefulWidget {
@@ -33,57 +34,20 @@ class _RestaurantsListScreenState extends State<RestaurantsListScreen> {
   }
 
   Future<void> _initializeData() async {
-    // Initialize providers
-    final restaurantProvider =
-        Provider.of<RestaurantProvider>(context, listen: false);
-    final connectivityService =
-        Provider.of<ConnectivityService>(context, listen: false);
+    // Initialize cubits
+    final restaurantCubit = context.read<RestaurantCubit>();
+    final connectivityService = context.read<ConnectivityService>();
 
     // If restaurants are already being loaded from splash screen, don't duplicate the effort
-    if (!restaurantProvider.hasBeenInitialized) {
+    if (!restaurantCubit.hasBeenInitialized) {
       // Initialize with context to use connectivity awareness
-      await restaurantProvider.initialize(context);
+      await restaurantCubit.initialize(context);
 
       // Check if still mounted before accessing context
       if (!mounted) return;
 
       // Mark data as refreshed
       connectivityService.markRefreshed();
-    }
-  }
-
-  Future<void> _refreshData() async {
-    final restaurantProvider =
-        Provider.of<RestaurantProvider>(context, listen: false);
-    final connectivityService =
-        Provider.of<ConnectivityService>(context, listen: false);
-
-    // Explicitly set loading state to true before refreshing
-    restaurantProvider.setLoading(true);
-
-    // Always use server data when explicitly refreshing
-    bool success = false;
-
-    // Only try to refresh from server if we're online
-    if (connectivityService.isOnline) {
-      success = await restaurantProvider.refreshRestaurants(context);
-
-      // Mark that we've refreshed the data
-      if (success) {
-        connectivityService.markRefreshed();
-      }
-    } else {
-      // Set loading to false when offline - don't show skeletons
-      restaurantProvider.setLoading(false);
-
-      // Check if still mounted before accessing context
-      if (!mounted) return;
-
-      // Show toast or alert that we're offline
-      Fluttertoast.showToast(
-        msg: 'You are offline. Please check your connection.',
-        backgroundColor: Colors.red,
-      );
     }
   }
 
@@ -95,8 +59,9 @@ class _RestaurantsListScreenState extends State<RestaurantsListScreen> {
         automaticallyImplyLeading: false,
         actions: [
           // Network status indicator
-          Consumer<ConnectivityService>(
-            builder: (context, connectivity, child) {
+          BlocBuilder<ConnectivityService, ConnectivityState>(
+            builder: (context, isConnected) {
+              final connectivity = context.read<ConnectivityService>();
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 child: Icon(
@@ -121,8 +86,9 @@ class _RestaurantsListScreenState extends State<RestaurantsListScreen> {
       body: Column(
         children: [
           // Connection status banner
-          Consumer<ConnectivityService>(
-            builder: (context, connectivity, child) {
+          BlocBuilder<ConnectivityService, ConnectivityState>(
+            builder: (context, isConnected) {
+              final connectivity = context.read<ConnectivityService>();
               if (!connectivity.isOnline) {
                 return Container(
                   color: Colors.orange.shade100,
@@ -162,9 +128,10 @@ class _RestaurantsListScreenState extends State<RestaurantsListScreen> {
             hintText: 'Search restaurants...',
           ),
           Expanded(
-            child: Consumer<RestaurantProvider>(
-              builder: (context, restaurantProvider, child) {
-                if (restaurantProvider.isLoading) {
+            child: BlocBuilder<RestaurantCubit, RestaurantState>(
+              builder: (context, state) {
+                final restaurantCubit = context.read<RestaurantCubit>();
+                if (state is RestaurantLoading) {
                   return ListView.builder(
                     padding: const EdgeInsets.all(16.0),
                     itemCount: 5,
@@ -176,7 +143,7 @@ class _RestaurantsListScreenState extends State<RestaurantsListScreen> {
                   );
                 }
 
-                if (restaurantProvider.error != null) {
+                if (state is RestaurantError) {
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.all(8.0),
@@ -184,12 +151,13 @@ class _RestaurantsListScreenState extends State<RestaurantsListScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            restaurantProvider.error!,
+                            state.message,
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton(
-                            onPressed: _refreshData,
+                            onPressed: () =>
+                                restaurantCubit.refreshData(context),
                             child: const Text('Retry'),
                           ),
                         ],
@@ -199,7 +167,7 @@ class _RestaurantsListScreenState extends State<RestaurantsListScreen> {
                 }
 
                 final restaurants =
-                    restaurantProvider.searchRestaurants(_searchQuery);
+                    restaurantCubit.searchRestaurants(_searchQuery);
 
                 if (restaurants.isEmpty) {
                   return Center(
@@ -210,7 +178,7 @@ class _RestaurantsListScreenState extends State<RestaurantsListScreen> {
                 }
 
                 return RefreshIndicator(
-                  onRefresh: _refreshData,
+                  onRefresh: () => restaurantCubit.refreshData(context),
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16.0),
                     itemCount: restaurants.length,

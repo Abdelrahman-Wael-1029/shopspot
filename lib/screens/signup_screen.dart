@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:provider/provider.dart';
+import 'package:shopspot/cubit/auth_cubit/auth_state.dart';
 import 'package:shopspot/utils/app_routes.dart';
-import 'package:shopspot/providers/auth_provider.dart';
+import 'package:shopspot/cubit/auth_cubit/auth_cubit.dart';
 import 'package:shopspot/widgets/custom_button.dart';
 import 'package:shopspot/widgets/custom_text_field.dart';
 
@@ -93,9 +94,9 @@ class _SignupScreenState extends State<SignupScreen> {
   Future<void> _register() async {
     if (!_validateInputs()) return;
 
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final authCubit = context.read<AuthCubit>();
 
-    final success = await authProvider.register(
+    final success = await authCubit.register(
       context: context,
       name: _nameController.text,
       email: _emailController.text,
@@ -123,9 +124,10 @@ class _SignupScreenState extends State<SignupScreen> {
     } else {
       if (mounted) {
         // Get validation errors from the response
-        final validationErrors = authProvider.validationErrors;
-        String errorMessage = authProvider.error ??
-            "Unable to create account. Please check your information and try again.";
+        final validationErrors = authCubit.validationErrors;
+        String errorMessage = authCubit.state is AuthError
+            ? (authCubit.state as AuthError).message
+            : "Unable to create account. Please check your information and try again.";
 
         // Clear previous field errors
         setState(() {
@@ -179,7 +181,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
+    final authCubit = context.read<AuthCubit>();
 
     return Scaffold(
       appBar: AppBar(
@@ -299,7 +301,7 @@ class _SignupScreenState extends State<SignupScreen> {
               CustomButton(
                 text: 'Sign Up',
                 onPressed: _register,
-                isLoading: authProvider.isLoading,
+                isLoading: authCubit.state is AuthLoading,
               ),
 
               const SizedBox(height: 20),

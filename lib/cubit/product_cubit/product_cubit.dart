@@ -1,30 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:provider/provider.dart';
+import 'package:shopspot/cubit/product_cubit/product_state.dart';
 import 'package:shopspot/models/restaurant_product_model.dart';
 import 'package:shopspot/models/product_model.dart';
 import 'package:shopspot/services/api_service.dart';
 import 'package:shopspot/services/database_service.dart';
-import 'package:shopspot/services/connectivity_service.dart';
+import 'package:shopspot/services/connectivity_service/connectivity_service.dart';
 
-class ProductProvider extends ChangeNotifier {
+class ProductCubit extends Cubit<ProductState> {
   List<Product> _allProducts = [];
-  bool _isLoading = false;
-  String? _error;
+
+  ProductCubit() : super(ProductInitial());
 
   List<Product> get allProducts => _allProducts;
-  bool get isLoading => _isLoading;
-  String? get error => _error;
 
   // Fetch products with context awareness
   Future<List<Product>> fetchData(BuildContext context,
       [int? restaurantId]) async {
-    _isLoading = true;
-    notifyListeners();
+    emit(ProductLoading());
 
     // Extract connectivity service
-    final connectivityService =
-        Provider.of<ConnectivityService>(context, listen: false);
+    final connectivityService = context.read<ConnectivityService>();
 
     // Always check cached restaurants availability first
     List<Product> cachedProducts = [];
@@ -64,7 +61,7 @@ class ProductProvider extends ChangeNotifier {
 
           // Save to database and update state
           await DatabaseService.saveProducts(serverProducts);
-          _error = null;
+          emit(ProductLoaded());
 
           // Mark as refreshed if connectivity service is available
           connectivityService.markRefreshed();
@@ -74,9 +71,9 @@ class ProductProvider extends ChangeNotifier {
     } finally {
       if (!serverIsAvailable || (serverIsAvailable && !result['success'])) {
         if (restaurantId == null && _allProducts.isNotEmpty) {
-          _error = null; // Don't show error if we have cached data
+          emit(ProductLoaded());
         } else if (restaurantId != null && hasCachedData) {
-          _error = null; // Don't show error if we have cached data
+          emit(ProductLoaded());
 
           // Show toast if connectivity service available
           if (context.mounted) {
@@ -86,13 +83,11 @@ class ProductProvider extends ChangeNotifier {
             );
           }
         } else {
-          _error = connectivityService.isOnline
+          emit(ProductError(connectivityService.isOnline
               ? 'Unable to connect to the server. Please check your connection.'
-              : 'You are offline. Please check your connection.';
+              : 'You are offline. Please check your connection.'));
         }
       }
-      _isLoading = false;
-      notifyListeners();
     }
     return cachedProducts;
   }

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:shopspot/services/connectivity_service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shopspot/cubit/product_cubit/product_state.dart';
+import 'package:shopspot/services/connectivity_service/connectivity_service.dart';
+import 'package:shopspot/services/connectivity_service/connectivity_state.dart';
 import 'package:shopspot/utils/app_routes.dart';
 import 'package:shopspot/widgets/custom_search.dart';
 import 'package:shopspot/widgets/product_search_card.dart';
-import 'package:shopspot/providers/product_provider.dart';
+import 'package:shopspot/cubit/product_cubit/product_cubit.dart';
 import 'package:shopspot/models/product_model.dart';
 
 class ProductsSearchScreen extends StatefulWidget {
@@ -33,8 +35,8 @@ class _ProductsSearchScreenState extends State<ProductsSearchScreen> {
   }
 
   Future<void> _loadData() async {
-    // Initialize providers
-    Provider.of<ProductProvider>(context, listen: false).fetchData(context);
+    // Initialize cubits
+    context.read<ProductCubit>().fetchData(context);
   }
 
   @override
@@ -44,8 +46,9 @@ class _ProductsSearchScreenState extends State<ProductsSearchScreen> {
         title: const Text('Search Products'),
         actions: [
           // Network status indicator
-          Consumer<ConnectivityService>(
-            builder: (context, connectivity, child) {
+          BlocBuilder<ConnectivityService, ConnectivityState>(
+            builder: (context, state) {
+              final connectivity = context.read<ConnectivityService>();
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 child: Icon(
@@ -70,8 +73,9 @@ class _ProductsSearchScreenState extends State<ProductsSearchScreen> {
       body: Column(
         children: [
           // Connection status banner
-          Consumer<ConnectivityService>(
-            builder: (context, connectivity, child) {
+          BlocBuilder<ConnectivityService, ConnectivityState>(
+            builder: (context, state) {
+              final connectivity = context.read<ConnectivityService>();
               if (!connectivity.isOnline) {
                 return Container(
                   color: Colors.orange.shade100,
@@ -111,9 +115,10 @@ class _ProductsSearchScreenState extends State<ProductsSearchScreen> {
             hintText: 'Search products...',
           ),
           Expanded(
-            child: Consumer<ProductProvider>(
-              builder: (ctx, productProvider, child) {
-                if (productProvider.isLoading) {
+            child: BlocBuilder<ProductCubit, ProductState>(
+              builder: (context, state) {
+                final productCubit = context.read<ProductCubit>();
+                if (state is ProductLoading) {
                   return ListView.builder(
                     padding: const EdgeInsets.all(16),
                     itemCount: 10,
@@ -125,7 +130,7 @@ class _ProductsSearchScreenState extends State<ProductsSearchScreen> {
                   );
                 }
 
-                if (productProvider.error != null) {
+                if (state is ProductError) {
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.all(8.0),
@@ -133,7 +138,7 @@ class _ProductsSearchScreenState extends State<ProductsSearchScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            productProvider.error!,
+                            state.message,
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 16),
@@ -147,8 +152,7 @@ class _ProductsSearchScreenState extends State<ProductsSearchScreen> {
                   );
                 }
 
-                final products =
-                    productProvider.searchAllProducts(_searchQuery);
+                final products = productCubit.searchAllProducts(_searchQuery);
 
                 if (products.isEmpty) {
                   return Center(

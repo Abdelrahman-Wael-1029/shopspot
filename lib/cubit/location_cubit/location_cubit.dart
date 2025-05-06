@@ -1,13 +1,15 @@
-import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shopspot/cubit/location_cubit/location_state.dart';
 import 'package:shopspot/models/restaurant_model.dart';
 
-class LocationProvider extends ChangeNotifier {
-  bool _isLoading = false;
+
+class LocationCubit extends Cubit<LocationState> {
   Position? _currentLocation;
   final Map<int, double?> _restaurantDistances = {};
 
-  bool get isLoading => _isLoading;
+  LocationCubit() : super(LocationInitial());
+
   Position? get currentLocation => _currentLocation;
 
   static Future<bool> checkLocationPermission({bool request = false}) async {
@@ -84,8 +86,8 @@ class LocationProvider extends ChangeNotifier {
 
   // Get distance from server (more accurate with road and terrain)
   Future<double?> getDistance(Restaurant restaurant) async {
-    _isLoading = true;
-    notifyListeners();
+    emit(LocationLoading());
+    
     try {
       await refreshLocation();
     } catch (e) {
@@ -93,16 +95,14 @@ class LocationProvider extends ChangeNotifier {
     }
 
     if (_currentLocation == null) {
-      _isLoading = false;
-      notifyListeners();
+      emit(LocationError("Failed to get location"));
       return null; // Failed to get location
     }
 
     // Calculate distance locally
     final distance = calculateDistance(restaurant);
     _restaurantDistances[restaurant.id] = distance;
-    _isLoading = false;
-    notifyListeners();
+    emit(LocationLoaded());
     return distance;
   }
 

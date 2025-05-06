@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:shopspot/cubit/restaurant_cubit/restaurant_state.dart';
 import 'package:shopspot/models/restaurant_model.dart';
 import 'package:shopspot/models/restaurant_product_model.dart';
 import 'package:shopspot/models/product_model.dart';
-import 'package:shopspot/providers/restaurant_provider.dart';
+import 'package:shopspot/cubit/restaurant_cubit/restaurant_cubit.dart';
 import 'package:shopspot/services/database_service.dart';
 import 'package:shopspot/utils/app_routes.dart';
 
@@ -112,7 +113,8 @@ class _ProductSearchCardState extends State<ProductSearchCard> {
 
   Future<void> _loadRestaurants() async {
     // Fetch restaurants related to the product
-    _restaurants = await Provider.of<RestaurantProvider>(context, listen: false)
+    _restaurants = await context
+        .read<RestaurantCubit>()
         .getRestaurantsByProductId(context, widget.product.id);
     _restaurantProducts =
         DatabaseService.getRelationsByProductId(widget.product.id);
@@ -180,8 +182,8 @@ class _ProductSearchCardState extends State<ProductSearchCard> {
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       clipBehavior: Clip.antiAlias,
-      child: Consumer<RestaurantProvider>(
-        builder: (context, restaurantProvider, _) {
+      child: BlocBuilder<RestaurantCubit, RestaurantState>(
+        builder: (context, state) {
           return ExpansionTile(
             onExpansionChanged: (expanded) {
               if (expanded) _loadRestaurants();
@@ -214,7 +216,7 @@ class _ProductSearchCardState extends State<ProductSearchCard> {
               overflow: TextOverflow.ellipsis,
             ),
             children: [
-              _buildRestaurantList(restaurantProvider),
+              _buildRestaurantList(),
             ],
           );
         },
@@ -222,21 +224,22 @@ class _ProductSearchCardState extends State<ProductSearchCard> {
     );
   }
 
-  Widget _buildRestaurantList(restaurantProvider) {
-    if (restaurantProvider.isLoadingProductRestaurants(widget.product.id)) {
+  Widget _buildRestaurantList() {
+    final restaurantCubit = context.read<RestaurantCubit>();
+    if (restaurantCubit.isLoadingProductRestaurants(widget.product.id)) {
       return const Padding(
         padding: EdgeInsets.all(16),
         child: Center(child: CircularProgressIndicator()),
       );
     }
-    if (restaurantProvider.productsError != null) {
+    if (restaurantCubit.productsError != null) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Text(
-            restaurantProvider.productsError!,
+            restaurantCubit.productsError!,
             style: TextStyle(
-                color: restaurantProvider.productsError!.contains('server')
+                color: restaurantCubit.productsError!.contains('server')
                     ? Colors.orange
                     : Colors.red),
           ),

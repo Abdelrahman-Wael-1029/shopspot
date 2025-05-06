@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shopspot/cubit/product_cubit/product_state.dart';
 import 'package:shopspot/models/product_model.dart';
 import 'package:shopspot/models/restaurant_model.dart';
 import 'package:shopspot/models/restaurant_product_model.dart';
-import 'package:shopspot/providers/product_provider.dart';
-import 'package:shopspot/services/connectivity_service.dart';
+import 'package:shopspot/cubit/product_cubit/product_cubit.dart';
+import 'package:shopspot/services/connectivity_service/connectivity_service.dart';
+import 'package:shopspot/services/connectivity_service/connectivity_state.dart';
 import 'package:shopspot/services/database_service.dart';
 import 'package:shopspot/widgets/custom_search.dart';
 import 'package:shopspot/widgets/product_card.dart';
@@ -44,10 +46,9 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
   }
 
   Future<void> _loadProducts() async {
-    final productProvider =
-        Provider.of<ProductProvider>(context, listen: false);
+    final productCubit = context.read<ProductCubit>();
     final products =
-        await productProvider.fetchData(context, widget.restaurant.id);
+        await productCubit.fetchData(context, widget.restaurant.id);
 
     if (mounted) {
       setState(() {
@@ -65,8 +66,9 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
         title: Text('${widget.restaurant.name} Products'),
         actions: [
           // Network status indicator
-          Consumer<ConnectivityService>(
-            builder: (context, connectivity, child) {
+          BlocBuilder<ConnectivityService, ConnectivityState>(
+            builder: (context, state) {
+              final connectivity = context.read<ConnectivityService>();
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 child: Icon(
@@ -81,8 +83,9 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
       body: Column(
         children: [
           // Connection status banner
-          Consumer<ConnectivityService>(
-            builder: (context, connectivity, child) {
+          BlocBuilder<ConnectivityService, ConnectivityState>(
+            builder: (context, state) {
+              final connectivity = context.read<ConnectivityService>();
               if (!connectivity.isOnline) {
                 return Container(
                   color: Colors.orange.shade100,
@@ -122,9 +125,10 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
             hintText: 'Search products...',
           ),
           Expanded(
-            child: Consumer<ProductProvider>(
-              builder: (context, productProvider, child) {
-                if (productProvider.isLoading) {
+            child: BlocBuilder<ProductCubit, ProductState>(
+              builder: (context, state) {
+                final productCubit = context.read<ProductCubit>();
+                if (state is ProductLoading) {
                   return GridView.builder(
                       padding: const EdgeInsets.all(16),
                       gridDelegate:
@@ -142,7 +146,7 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                       });
                 }
 
-                if (productProvider.error != null) {
+                if (state is ProductError) {
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.all(8.0),
@@ -150,7 +154,7 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            productProvider.error!,
+                            state.message,
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 16),
@@ -165,7 +169,7 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                 }
 
                 final products =
-                    productProvider.filterProducts(_products, _searchQuery);
+                    productCubit.filterProducts(_products, _searchQuery);
 
                 if (products.isEmpty) {
                   return Center(

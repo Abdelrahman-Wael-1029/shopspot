@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:shopspot/providers/index_provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shopspot/cubit/index_cubit/index_cubit.dart';
+import 'package:shopspot/cubit/index_cubit/index_state.dart';
 import 'package:shopspot/screens/restaurants_list_screen.dart';
 import 'package:shopspot/screens/favorites_screen.dart';
 import 'package:shopspot/screens/products_search_screen.dart';
@@ -10,11 +11,12 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<IndexProvider>(
-      builder: (context, indexProvider, child) {
+    return BlocBuilder<IndexCubit, IndexState>(
+      builder: (context, state) {
+        final indexCubit = context.read<IndexCubit>();
         return Scaffold(
           body: IndexedStack(
-            index: indexProvider.currentIndex,
+            index: indexCubit.currentIndex,
             children: [
               const RestaurantsListScreen(),
               const FavoritesScreen(),
@@ -22,8 +24,8 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
           bottomNavigationBar: BottomNavigationBar(
-            currentIndex: indexProvider.currentIndex,
-            onTap: (index) => indexProvider.changeIndex(index),
+            currentIndex: indexCubit.currentIndex,
+            onTap: (index) => indexCubit.changeIndex(index),
             items: const [
               BottomNavigationBarItem(
                 icon: Icon(Icons.restaurant),

@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-import 'package:shopspot/providers/index_provider.dart';
+import 'package:shopspot/cubit/index_cubit/index_cubit.dart';
 import 'package:shopspot/utils/app_routes.dart';
-import 'package:shopspot/utils/app_theme.dart';
-import 'package:shopspot/providers/auth_provider.dart';
-import 'package:shopspot/providers/restaurant_provider.dart';
-import 'package:shopspot/providers/favorite_provider.dart';
-import 'package:shopspot/providers/location_provider.dart';
-import 'package:shopspot/providers/product_provider.dart';
+import 'package:shopspot/cubit/auth_cubit/auth_cubit.dart';
+import 'package:shopspot/cubit/restaurant_cubit/restaurant_cubit.dart';
+import 'package:shopspot/cubit/favorite_cubit/favorite_cubit.dart';
+import 'package:shopspot/cubit/location_cubit/location_cubit.dart';
+import 'package:shopspot/cubit/product_cubit/product_cubit.dart';
 import 'package:shopspot/services/database_service.dart';
-import 'package:shopspot/services/connectivity_service.dart';
+import 'package:shopspot/services/connectivity_service/connectivity_service.dart';
 
 void main() async {
   // Ensure Flutter is initialized - this is important!
@@ -23,15 +22,15 @@ void main() async {
   await DatabaseService.init();
 
   runApp(
-    MultiProvider(
+    MultiBlocProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => IndexProvider()),
-        ChangeNotifierProvider(create: (_) => ConnectivityService()),
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => RestaurantProvider()),
-        ChangeNotifierProvider(create: (_) => FavoriteProvider()),
-        ChangeNotifierProvider(create: (_) => LocationProvider()),
-        ChangeNotifierProvider(create: (_) => ProductProvider()),
+        BlocProvider(create: (_) => RestaurantCubit()),
+        BlocProvider(create: (_) => IndexCubit()),
+        BlocProvider(create: (_) => ConnectivityService()),
+        BlocProvider(create: (_) => AuthCubit()),
+        BlocProvider(create: (_) => FavoriteCubit()),
+        BlocProvider(create: (_) => LocationCubit()),
+        BlocProvider(create: (_) => ProductCubit()),
       ],
       child: const MyApp(),
     ),
@@ -80,14 +79,14 @@ class _InitScreenState extends State<InitScreen> {
     if (!mounted) return;
 
     // Check authentication status
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final isAuthenticated = authProvider.checkCachedAuthentication();
+    final authCubit = context.read<AuthCubit>();
+    final isAuthenticated = authCubit.checkCachedAuthentication();
 
     // Wait a brief moment to ensure proper initialization
     await Future.delayed(const Duration(milliseconds: 500));
 
     // Request location permission
-    await LocationProvider.checkLocationPermission(request: true);
+    await LocationCubit.checkLocationPermission(request: true);
 
     // Remove splash screen
     FlutterNativeSplash.remove();
@@ -144,11 +143,11 @@ class AppLifecycleManager extends StatefulWidget {
 
 class _AppLifecycleManagerState extends State<AppLifecycleManager>
     with WidgetsBindingObserver {
-  // Restaurant providers as class members to avoid BuildContext access in async methods
+  // Restaurant cubits as class members to avoid BuildContext access in async methods
   late ConnectivityService _connectivityService;
-  late AuthProvider _authProvider;
-  late RestaurantProvider _restaurantProvider;
-  bool _providersInitialized = false;
+  late AuthCubit _authCubit;
+  late RestaurantCubit _restaurantCubit;
+  bool _cubitsInitialized = false;
 
   @override
   void initState() {
@@ -165,27 +164,27 @@ class _AppLifecycleManagerState extends State<AppLifecycleManager>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Initialize providers once when dependencies are available
-    if (!_providersInitialized) {
+    // Initialize cubits once when dependencies are available
+    if (!_cubitsInitialized) {
       _connectivityService =
-          Provider.of<ConnectivityService>(context, listen: false);
-      _authProvider = Provider.of<AuthProvider>(context, listen: false);
-      _restaurantProvider =
-          Provider.of<RestaurantProvider>(context, listen: false);
-      _providersInitialized = true;
+          context.read<ConnectivityService>();
+      _authCubit = context.read<AuthCubit>();
+      _restaurantCubit =
+          context.read<RestaurantCubit>();
+      _cubitsInitialized = true;
     }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (!mounted || !_providersInitialized) return;
+    if (!mounted || !_cubitsInitialized) return;
 
     // When app resumes, refresh data if needed
     if (state == AppLifecycleState.resumed) {
       _connectivityService.checkConnectivity();
-      if (_connectivityService.shouldRefresh && _authProvider.isAuthenticated) {
+      if (_connectivityService.shouldRefresh && _authCubit.isAuthenticated) {
         // Refresh data from server - but not profile data (will be refreshed on demand)
-        _restaurantProvider.refreshRestaurants(context);
+        _restaurantCubit.refreshRestaurants(context);
 
         // Mark that we've refreshed
         _connectivityService.markRefreshed();

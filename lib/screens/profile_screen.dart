@@ -1,12 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart';
+import 'package:shopspot/cubit/auth_cubit/auth_state.dart';
 import 'package:shopspot/utils/app_routes.dart';
 import 'package:shopspot/models/user_model.dart';
-import 'package:shopspot/providers/auth_provider.dart';
-import 'package:shopspot/services/connectivity_service.dart';
+import 'package:shopspot/cubit/auth_cubit/auth_cubit.dart';
+import 'package:shopspot/services/connectivity_service/connectivity_service.dart';
 import 'package:shopspot/widgets/custom_button.dart';
 import 'package:shopspot/widgets/custom_text_field.dart';
 
@@ -54,23 +55,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadUserProfile() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final connectivityService =
-        Provider.of<ConnectivityService>(context, listen: false);
+    final authCubit = context.read<AuthCubit>();
+    final connectivityService = context.read<ConnectivityService>();
 
     // Check if we need to get fresh data from server
     final shouldLoadFromServer =
         connectivityService.isOnline && connectivityService.shouldRefresh;
 
     // Display current cached data immediately if available
-    _updateUIWithUserData(authProvider.user);
+    _updateUIWithUserData(authCubit.user);
 
     if (shouldLoadFromServer) {
       // Load from server
-      await authProvider.getProfile(context);
+      await authCubit.getProfile(context);
 
       // Update UI with fresh data
-      _updateUIWithUserData(authProvider.user);
+      _updateUIWithUserData(authCubit.user);
 
       // Mark as refreshed
       connectivityService.markRefreshed();
@@ -208,9 +208,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _updateProfile() async {
     if (!_validateInputs()) return;
 
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final authCubit = context.read<AuthCubit>();
 
-    final success = await authProvider.updateProfile(
+    final success = await authCubit.updateProfile(
       name: _nameController.text,
       gender: _gender,
       level: _level,
@@ -235,15 +235,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
     } else {
       Fluttertoast.showToast(
-        msg: authProvider.error ?? "Something went wrong. Please try again.",
+        msg: authCubit.state is AuthError
+            ? (authCubit.state as AuthError).message
+            : "Something went wrong. Please try again.",
         backgroundColor: Colors.orange,
       );
     }
   }
 
   Future<void> _logout() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    await authProvider.logout(context);
+    final authCubit = context.read<AuthCubit>();
+    await authCubit.logout(context);
 
     if (mounted) {
       Navigator.pushReplacementNamed(
@@ -280,8 +282,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final user = authProvider.user;
+    final authCubit = context.read<AuthCubit>();
+    final user = authCubit.user;
 
     if (user == null) {
       return const Scaffold(
@@ -294,7 +296,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
-        centerTitle: true,
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
@@ -343,7 +344,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
-      body: authProvider.isLoading
+      body: authCubit.state is AuthLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               child: Padding(
@@ -536,7 +537,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         CustomButton(
           text: 'Update Profile',
           onPressed: _updateProfile,
-          isLoading: Provider.of<AuthProvider>(context).isLoading,
+          isLoading: context.read<AuthCubit>().state is AuthLoading,
         ),
       ],
     );

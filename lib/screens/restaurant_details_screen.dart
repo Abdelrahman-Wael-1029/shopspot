@@ -1,12 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:shopspot/services/connectivity_service.dart';
-import 'package:provider/provider.dart';
+import 'package:shopspot/services/connectivity_service/connectivity_service.dart';
 import 'package:shopspot/utils/app_routes.dart';
 import 'package:shopspot/models/restaurant_model.dart';
-import 'package:shopspot/providers/favorite_provider.dart';
-import 'package:shopspot/providers/restaurant_provider.dart';
+import 'package:shopspot/cubit/favorite_cubit/favorite_cubit.dart';
+import 'package:shopspot/cubit/restaurant_cubit/restaurant_cubit.dart';
 import 'package:shopspot/widgets/restaurant_location_widget.dart';
 
 class RestaurantDetailsScreen extends StatefulWidget {
@@ -27,7 +27,7 @@ class _RestaurantDetailsScreenState extends State<RestaurantDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Get the current favorite status from the provider
+    // Get the current favorite status from the cubit
     final isFavorite = widget.restaurant.isFavorite;
 
     return Scaffold(
@@ -143,7 +143,7 @@ class _RestaurantDetailsScreenState extends State<RestaurantDetailsScreen> {
   Future<void> _updateFavoriteStatus(isFavorite) async {
     // Check connectivity status first
     final connectivityService =
-        Provider.of<ConnectivityService>(context, listen: false);
+        context.read<ConnectivityService>();
 
     if (!connectivityService.isOnline) {
       // Show toast message when offline
@@ -168,25 +168,25 @@ class _RestaurantDetailsScreenState extends State<RestaurantDetailsScreen> {
     });
 
     try {
-      // Get the favorite provider
-      final favoriteProvider =
-          Provider.of<FavoriteProvider>(context, listen: false);
-      // Get the restaurant provider
-      final restaurantProvider =
-          Provider.of<RestaurantProvider>(context, listen: false);
+      // Get the favorite cubit
+      final favoriteCubit =
+          context.read<FavoriteCubit>();
+      // Get the restaurant cubit
+      final restaurantCubit =
+          context.read<RestaurantCubit>();
 
       // Call the appropriate method directly based on current state
       bool success = false;
       try {
         success =
-            await favoriteProvider.toggleFavorite(widget.restaurant, context);
+            await favoriteCubit.toggleFavorite(widget.restaurant, context);
       } catch (e) {
         success = false;
       }
 
-      // If successful, update the restaurant provider to ensure UI consistency
+      // If successful, update the restaurant cubit to ensure UI consistency
       if (success) {
-        restaurantProvider.updateFavoriteStatus(
+        restaurantCubit.updateFavoriteStatus(
             widget.restaurant.id, !isFavorite // Toggle the current state
             );
       } else {

@@ -1,39 +1,38 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:shopspot/providers/favorite_provider.dart';
-import 'package:shopspot/providers/restaurant_provider.dart';
-import 'package:provider/provider.dart';
+import 'package:shopspot/cubit/auth_cubit/auth_state.dart';
+import 'package:shopspot/cubit/favorite_cubit/favorite_cubit.dart';
+import 'package:shopspot/cubit/restaurant_cubit/restaurant_cubit.dart';
 import 'package:shopspot/models/user_model.dart';
 import 'package:shopspot/services/api_service.dart';
 import 'package:shopspot/services/database_service.dart';
-import 'package:shopspot/services/connectivity_service.dart';
+import 'package:shopspot/services/connectivity_service/connectivity_service.dart';
 
-class AuthProvider extends ChangeNotifier {
+class AuthCubit extends Cubit<AuthState> {
   User? _user;
-  bool _isLoading = false;
-  String? _error;
   Map<String, dynamic>? _validationErrors;
 
+  AuthCubit() : super(AuthInitial());
+
   User? get user => _user;
-  bool get isLoading => _isLoading;
-  String? get error => _error;
   Map<String, dynamic>? get validationErrors => _validationErrors;
   bool get isAuthenticated => _user != null;
 
   // Login user
   Future<bool> login(
       BuildContext context, String email, String password) async {
-    _isLoading = true;
-    _error = null;
     _validationErrors = null;
+    emit(AuthLoading());
     bool success = false;
 
     try {
       // Check internet connection before attempting login
       final hasInternet = await ApiService.isApiAccessible();
       if (!hasInternet) {
-        _error = 'Unable to connect to the server. Please try again later.';
+        emit(AuthError(
+            'Unable to connect to the server. Please try again later.'));
         return false;
       }
 
@@ -42,19 +41,17 @@ class AuthProvider extends ChangeNotifier {
       if (result['success']) {
         _user = DatabaseService.getCurrentUser();
         success = true;
+        emit(AuthLoaded());
         if (context.mounted) {
-          Provider.of<RestaurantProvider>(context, listen: false)
-              .refreshRestaurants(context);
+          context.read<RestaurantCubit>().refreshRestaurants(context);
         }
       } else {
-        _error = result['message'];
         _validationErrors = result['errors'] as Map<String, dynamic>?;
+        emit(AuthError(result['message']));
       }
     } catch (e) {
-      _error = 'Unable to connect to the server. Please try again later.';
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+      emit(AuthError(
+          'Unable to connect to the server. Please try again later.'));
     }
 
     return success;
@@ -70,16 +67,16 @@ class AuthProvider extends ChangeNotifier {
     String? gender,
     String? level,
   }) async {
-    _isLoading = true;
-    _error = null;
     _validationErrors = null;
+    emit(AuthLoading());
     bool success = false;
 
     try {
       // Check internet connection before attempting registration
       final hasInternet = await ApiService.isApiAccessible();
       if (!hasInternet) {
-        _error = 'Unable to connect to the server. Please try again later.';
+        emit(AuthError(
+            'Unable to connect to the server. Please try again later.'));
         return false;
       }
 
@@ -95,19 +92,17 @@ class AuthProvider extends ChangeNotifier {
       if (result['success']) {
         _user = DatabaseService.getCurrentUser();
         success = true;
+        emit(AuthLoaded());
         if (context.mounted) {
-          Provider.of<RestaurantProvider>(context, listen: false)
-              .refreshRestaurants(context);
+          context.read<RestaurantCubit>().refreshRestaurants(context);
         }
       } else {
-        _error = result['message'];
         _validationErrors = result['errors'] as Map<String, dynamic>?;
+        emit(AuthError(result['message']));
       }
     } catch (e) {
-      _error = 'Unable to connect to the server. Please try again later.';
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+      emit(AuthError(
+          'Unable to connect to the server. Please try again later.'));
     }
 
     return success;
@@ -115,11 +110,10 @@ class AuthProvider extends ChangeNotifier {
 
   // Logout user
   Future<void> logout(BuildContext context) async {
-    _isLoading = true;
-    notifyListeners();
+    emit(AuthLoading());
 
     try {
-      Provider.of<FavoriteProvider>(context, listen: false).clearAllFavorites();
+      context.read<FavoriteCubit>().clearAllFavorites();
       // Try to logout from server if we have internet
       final hasInternet = await ApiService.isApiAccessible();
       if (hasInternet) {
@@ -130,18 +124,15 @@ class AuthProvider extends ChangeNotifier {
       await DatabaseService.deleteCurrentUser();
 
       _user = null;
-      _isLoading = false;
-      notifyListeners();
+      emit(AuthInitial());
     }
   }
 
   // Get user profile data
   Future<void> getProfile(BuildContext context) async {
-    _isLoading = true;
-    notifyListeners();
+    emit(AuthLoading());
 
-    final connectivityService =
-        Provider.of<ConnectivityService>(context, listen: false);
+    final connectivityService = context.read<ConnectivityService>();
 
     // Check if local user data exists
     final localUser = DatabaseService.getCurrentUser();
@@ -160,7 +151,7 @@ class AuthProvider extends ChangeNotifier {
 
         if (result['success']) {
           _user = result['user'];
-          _error = null;
+          emit(AuthLoaded());
 
           // Mark as refreshed
           connectivityService.markRefreshed();
@@ -172,7 +163,7 @@ class AuthProvider extends ChangeNotifier {
       if (!serverIsAvailable || (serverIsAvailable && !result['success'])) {
         if (hasLocalData) {
           _user = localUser;
-          _error = null; // Don't show error if we have cached data
+          emit(AuthLoaded());
 
           // Show toast if connectivity service is available
           if (context.mounted) {
@@ -182,12 +173,10 @@ class AuthProvider extends ChangeNotifier {
             );
           }
         } else {
-          _error =
-              'Network connection required. Please check your connection and try again.';
+          emit(AuthError(
+              'Network connection required. Please check your connection and try again.'));
         }
       }
-      _isLoading = false;
-      notifyListeners();
     }
   }
 
@@ -200,15 +189,14 @@ class AuthProvider extends ChangeNotifier {
     String? passwordConfirmation,
     File? profilePhoto,
   }) async {
-    _isLoading = true;
-    _error = null;
+    emit(AuthLoading());
     bool success = false;
 
     try {
       // Check internet connection before attempting update
       final hasInternet = await ApiService.isApiAccessible();
       if (!hasInternet) {
-        _error = 'Unable to connect to the server. Please try again later.';
+        emit(AuthError('Unable to connect to the server. Please try again later.'));
         return false;
       }
 
@@ -224,14 +212,12 @@ class AuthProvider extends ChangeNotifier {
       if (result['success']) {
         _user = DatabaseService.getCurrentUser();
         success = true;
+        emit(AuthLoaded());
       } else {
-        _error = result['message'];
+        emit(AuthError(result['message']));
       }
     } catch (e) {
-      _error = 'Unable to connect to the server. Please try again later.';
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+      emit(AuthError('Unable to connect to the server. Please try again later.'));
     }
 
     return success;
@@ -243,6 +229,11 @@ class AuthProvider extends ChangeNotifier {
     final localUser = DatabaseService.getCurrentUser();
     _user = localUser; // Set the user from local cache
 
-    return localUser != null;
+    if (localUser != null) {
+      emit(AuthLoaded());
+      return true;
+    }
+
+    return false;
   }
 }

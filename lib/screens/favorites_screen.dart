@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:provider/provider.dart';
-import 'package:shopspot/providers/index_provider.dart';
+import 'package:shopspot/cubit/favorite_cubit/favorite_state.dart';
+import 'package:shopspot/cubit/index_cubit/index_cubit.dart';
+import 'package:shopspot/cubit/restaurant_cubit/restaurant_state.dart';
+import 'package:shopspot/services/connectivity_service/connectivity_state.dart';
 import 'package:shopspot/utils/app_routes.dart';
 import 'package:shopspot/widgets/custom_search.dart';
 import 'package:shopspot/widgets/restaurant_card.dart';
 import 'package:shopspot/models/restaurant_model.dart';
-import 'package:shopspot/providers/favorite_provider.dart';
-import 'package:shopspot/services/connectivity_service.dart';
-import 'package:shopspot/providers/restaurant_provider.dart';
+import 'package:shopspot/cubit/favorite_cubit/favorite_cubit.dart';
+import 'package:shopspot/services/connectivity_service/connectivity_service.dart';
+import 'package:shopspot/cubit/restaurant_cubit/restaurant_cubit.dart';
 
 // Custom widget to handle loading state during dismissal
 class DismissibleRestaurantCard extends StatefulWidget {
@@ -50,8 +53,7 @@ class _DismissibleRestaurantCardState extends State<DismissibleRestaurantCard> {
 
   @override
   Widget build(BuildContext context) {
-    final connectivityService =
-        Provider.of<ConnectivityService>(context, listen: false);
+    final connectivityService = context.read<ConnectivityService>();
 
     return Stack(
       children: [
@@ -130,15 +132,13 @@ class _DismissibleRestaurantCardState extends State<DismissibleRestaurantCard> {
                   return shouldDelete;
                 },
           onDismissed: (direction) async {
-            // Get providers before async operations
-            final favoriteProvider =
-                Provider.of<FavoriteProvider>(context, listen: false);
-            final restaurantProvider =
-                Provider.of<RestaurantProvider>(context, listen: false);
+            // Get cubits before async operations
+            final favoriteCubit = context.read<FavoriteCubit>();
+            final restaurantCubit = context.read<RestaurantCubit>();
 
             try {
               // Remove from favorites - this updates the UI before the API call completes
-              final success = await favoriteProvider.removeFromFavorites(
+              final success = await favoriteCubit.removeFromFavorites(
                   widget.restaurant, context);
 
               // Check if still mounted after async operation
@@ -146,8 +146,8 @@ class _DismissibleRestaurantCardState extends State<DismissibleRestaurantCard> {
 
               // Only proceed if the removal was successful
               if (success) {
-                // Also update the RestaurantProvider to maintain UI consistency
-                restaurantProvider.updateFavoriteStatus(
+                // Also update the RestaurantCubit to maintain UI consistency
+                restaurantCubit.updateFavoriteStatus(
                     widget.restaurant.id, false);
 
                 Fluttertoast.showToast(
@@ -237,16 +237,14 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   }
 
   Future<void> _loadFavorites() async {
-    // Capture providers before any async operations
-    final favoriteProvider =
-        Provider.of<FavoriteProvider>(context, listen: false);
-    final connectivityService =
-        Provider.of<ConnectivityService>(context, listen: false);
+    // Capture cubits before any async operations
+    final favoriteCubit = context.read<FavoriteCubit>();
+    final connectivityService = context.read<ConnectivityService>();
 
     // Only initialize if not already initialized
-    if (!favoriteProvider.hasBeenInitialized) {
+    if (!favoriteCubit.hasBeenInitialized) {
       // Initialize with context to use connectivity awareness
-      await favoriteProvider.initialize(context);
+      await favoriteCubit.initialize(context);
 
       // Early return if widget is unmounted
       if (!mounted) return;
@@ -281,8 +279,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         ),
         const SizedBox(height: 24),
         ElevatedButton(
-          onPressed: () =>
-              Provider.of<IndexProvider>(context, listen: false).changeIndex(0),
+          onPressed: () => context.read<IndexCubit>().changeIndex(0),
           child: const Text('Browse Restaurants'),
         ),
       ],
@@ -296,8 +293,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         title: const Text('Favorites'),
         actions: [
           // Network status indicator
-          Consumer<ConnectivityService>(
-            builder: (context, connectivity, child) {
+          BlocBuilder<ConnectivityService, ConnectivityState>(
+            builder: (context, state) {
+              final connectivity = context.read<ConnectivityService>();
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 child: Icon(
@@ -322,8 +320,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       body: Column(
         children: [
           // Connection status banner
-          Consumer<ConnectivityService>(
-            builder: (context, connectivity, child) {
+          BlocBuilder<ConnectivityService, ConnectivityState>(
+            builder: (context, state) {
+              final connectivity = context.read<ConnectivityService>();
               if (!connectivity.isOnline) {
                 return Container(
                   color: Colors.orange.shade100,
@@ -363,10 +362,12 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             hintText: 'Search restaurants...',
           ),
           Expanded(
-            child: Consumer2<RestaurantProvider, FavoriteProvider>(
-              builder: (context, restaurantProvider, favoriteProvider, child) {
-                if (favoriteProvider.isLoading ||
-                    restaurantProvider.isLoading) {
+            child: Builder(
+              builder: (context) {
+                final favoriteCubit = context.watch<FavoriteCubit>();
+                final restaurantCubit = context.watch<RestaurantCubit>();
+                if (favoriteCubit.state is FavoriteLoading ||
+                    restaurantCubit.state is RestaurantLoading) {
                   // Create a more explicit loading skeleton to ensure it's visible
                   return ListView.builder(
                     padding: const EdgeInsets.all(16.0),
@@ -381,8 +382,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   );
                 }
 
-                final favorites =
-                    favoriteProvider.searchFavorites(_searchQuery);
+                final favorites = favoriteCubit.searchFavorites(_searchQuery);
 
                 if (favorites.isEmpty) {
                   return Center(

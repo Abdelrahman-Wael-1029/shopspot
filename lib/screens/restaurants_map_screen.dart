@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:provider/provider.dart';
-import 'package:shopspot/providers/location_provider.dart';
+import 'package:shopspot/cubit/location_cubit/location_cubit.dart';
 import 'package:shopspot/utils/app_routes.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -36,11 +36,11 @@ class _RestaurantsMapScreenState extends State<RestaurantsMapScreen> {
   void _createMarkers() {
     _markers = widget.restaurants.map((restaurant) {
       // Pre-calculate distance if available
-      final locationProvider =
-          Provider.of<LocationProvider>(context, listen: false);
-      final distance = locationProvider.getDistanceSync(restaurant);
+      final locationCubit =
+          context.read<LocationCubit>();
+      final distance = locationCubit.getDistanceSync(restaurant);
       final String distanceText =
-          distance != null ? locationProvider.formatDistance(distance) : '';
+          distance != null ? locationCubit.formatDistance(distance) : '';
 
       return Marker(
         point: LatLng(restaurant.latitude, restaurant.longitude),
@@ -153,17 +153,17 @@ class _RestaurantsMapScreenState extends State<RestaurantsMapScreen> {
   void _fitBounds({bool includeUserLocation = true}) {
     if (widget.restaurants.isEmpty) return;
 
-    final locationProvider =
-        Provider.of<LocationProvider>(context, listen: false);
+    final locationCubit =
+        context.read<LocationCubit>();
     final hasLocation =
-        locationProvider.currentLocation != null && includeUserLocation;
+        locationCubit.currentLocation != null && includeUserLocation;
 
     double minLat = hasLocation
-        ? locationProvider.currentLocation!.latitude
+        ? locationCubit.currentLocation!.latitude
         : widget.restaurants.first.latitude;
     double maxLat = minLat;
     double minLng = hasLocation
-        ? locationProvider.currentLocation!.longitude
+        ? locationCubit.currentLocation!.longitude
         : widget.restaurants.first.longitude;
     double maxLng = minLng;
 
@@ -200,12 +200,12 @@ class _RestaurantsMapScreenState extends State<RestaurantsMapScreen> {
     });
 
     try {
-      final locationProvider =
-          Provider.of<LocationProvider>(context, listen: false);
+      final locationCubit =
+          context.read<LocationCubit>();
 
       // Check permission first
       final hasPermission =
-          await LocationProvider.checkLocationPermission(request: true);
+          await LocationCubit.checkLocationPermission(request: true);
       if (!hasPermission) {
         Fluttertoast.showToast(
           msg: 'Location permission denied. Please enable in settings.',
@@ -214,7 +214,7 @@ class _RestaurantsMapScreenState extends State<RestaurantsMapScreen> {
         return;
       }
 
-      await locationProvider.refreshLocation();
+      await locationCubit.refreshLocation();
 
       // Re-create markers with updated distances
       _createMarkers();
@@ -243,7 +243,7 @@ class _RestaurantsMapScreenState extends State<RestaurantsMapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final locationProvider = Provider.of<LocationProvider>(context);
+    final locationCubit = context.read<LocationCubit>();
 
     if (widget.restaurants.isEmpty) {
       return Scaffold(
@@ -302,13 +302,13 @@ class _RestaurantsMapScreenState extends State<RestaurantsMapScreen> {
           ),
           MarkerLayer(markers: _markers),
           // Current Location Marker
-          if (locationProvider.currentLocation != null)
+          if (locationCubit.currentLocation != null)
             MarkerLayer(
               markers: [
                 Marker(
                   point: LatLng(
-                    locationProvider.currentLocation!.latitude,
-                    locationProvider.currentLocation!.longitude,
+                    locationCubit.currentLocation!.latitude,
+                    locationCubit.currentLocation!.longitude,
                   ),
                   width: 40,
                   height: 40,

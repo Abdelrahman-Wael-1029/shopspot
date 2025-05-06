@@ -1,42 +1,40 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:shopspot/providers/restaurant_provider.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shopspot/cubit/favorite_cubit/favorite_state.dart';
+import 'package:shopspot/cubit/restaurant_cubit/restaurant_cubit.dart';
+import 'package:shopspot/cubit/restaurant_cubit/restaurant_state.dart';
 import 'package:shopspot/models/restaurant_model.dart';
 import 'package:shopspot/services/api_service.dart';
 import 'package:shopspot/services/database_service.dart';
-import 'package:shopspot/services/connectivity_service.dart';
+import 'package:shopspot/services/connectivity_service/connectivity_service.dart';
 
-class FavoriteProvider extends ChangeNotifier {
+class FavoriteCubit extends Cubit<FavoriteState> {
   List<Restaurant> _favorites = [];
-  bool _isLoading = false;
-  String? _error;
   bool _hasBeenInitialized = false; // Track if we've loaded favorites before
 
+  FavoriteCubit() : super(FavoriteInitial());
+
   List<Restaurant> get favorites => _favorites;
-  bool get isLoading => _isLoading;
-  String? get error => _error;
   bool get hasBeenInitialized => _hasBeenInitialized;
 
-  // Initialize provider and load favorites
+  // Initialize cubit and load favorites
   Future<void> initialize(BuildContext context) async {
-    final RestaurantProvider restaurantProvider =
-        Provider.of<RestaurantProvider>(context, listen: false);
+    final RestaurantCubit restaurantCubit = context.read<RestaurantCubit>();
 
-    // Set loading state to match the restaurant provider
-    _isLoading = true;
-    notifyListeners();
+    // Set loading state to match the restaurant cubit
+    emit(FavoriteLoading());
+    if (restaurantCubit.state is RestaurantLoading) {
+      late StreamSubscription subscription;
 
-    // If restaurant provider is still loading, wait for it to complete
-    if (restaurantProvider.isLoading) {
-      // Listen for changes in the restaurant provider's loading state
-      restaurantProvider.addListener(() {
-        // When restaurant provider finishes loading, load favorites
-        if (!restaurantProvider.isLoading && _isLoading) {
+      subscription = restaurantCubit.stream.listen((restaurantState) {
+        if (restaurantState is RestaurantLoaded && state is FavoriteLoading) {
           _loadFavoritesFromDatabase();
+          subscription.cancel();
         }
       });
-    } else {
-      // Restaurant provider already loaded, load favorites immediately
+    } else if (restaurantCubit.state is RestaurantLoaded) {
       _loadFavoritesFromDatabase();
     }
   }
@@ -45,8 +43,7 @@ class FavoriteProvider extends ChangeNotifier {
   void _loadFavoritesFromDatabase() {
     _favorites = DatabaseService.getFavoriteRestaurants();
     _hasBeenInitialized = true;
-    _isLoading = false;
-    notifyListeners();
+    emit(FavoriteLoaded());
   }
 
   // Clear all favorites (call this on logout)
@@ -54,15 +51,14 @@ class FavoriteProvider extends ChangeNotifier {
     _favorites = [];
     _hasBeenInitialized = false;
     await DatabaseService.clearAllFavorites();
-    notifyListeners();
+    emit(FavoriteInitial());
   }
 
   // Add a restaurant to favorites
   Future<bool> addToFavorites(
       Restaurant restaurant, BuildContext context) async {
     // Extract ConnectivityService early if context is provided
-    final connectivityService =
-        Provider.of<ConnectivityService>(context, listen: false);
+    final connectivityService = context.read<ConnectivityService>();
 
     // Make a copy of the restaurant to avoid modifying the original
     final updatedRestaurant = Restaurant.from(restaurant);
@@ -88,11 +84,12 @@ class FavoriteProvider extends ChangeNotifier {
       // Now update local state
       _favorites.add(updatedRestaurant);
 
-      notifyListeners();
+      emit(FavoriteLoaded());
       success = true;
     } catch (e) {
       // Mark server unavailable if connectivity service exists
       connectivityService.setServerUnavailable();
+      emit(FavoriteError('Something went wrong.'));
       return false;
     }
 
@@ -103,8 +100,7 @@ class FavoriteProvider extends ChangeNotifier {
   Future<bool> removeFromFavorites(
       Restaurant restaurant, BuildContext context) async {
     // Extract ConnectivityService early if context is provided
-    final connectivityService =
-        Provider.of<ConnectivityService>(context, listen: false);
+    final connectivityService = context.read<ConnectivityService>();
 
     // Make a copy of the restaurant to avoid modifying the original
     final updatedRestaurant = Restaurant.from(restaurant);
@@ -129,11 +125,12 @@ class FavoriteProvider extends ChangeNotifier {
 
       // Now update local state
       _favorites.remove(restaurant);
-      notifyListeners();
+      emit(FavoriteLoaded());
       success = true;
     } catch (e) {
       // Mark server unavailable if connectivity service exists
       connectivityService.setServerUnavailable();
+      emit(FavoriteError('Something went wrong.'));
       return false;
     }
 

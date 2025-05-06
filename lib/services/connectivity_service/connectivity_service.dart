@@ -1,8 +1,10 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 
-class ConnectivityService with ChangeNotifier {
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shopspot/services/connectivity_service/connectivity_state.dart';
+
+class ConnectivityService extends Cubit<ConnectivityState> {
   bool _isOnline = false;
   bool _wasOffline = false;
   DateTime _lastRefreshTime = DateTime.now();
@@ -22,7 +24,7 @@ class ConnectivityService with ChangeNotifier {
   // Getter for favorite server status
   bool get isServerUnavailable => _isServerUnavailable;
 
-  ConnectivityService() {
+  ConnectivityService() : super(ConnectivityInitial()) {
     _initConnectivity();
   }
 
@@ -52,7 +54,7 @@ class ConnectivityService with ChangeNotifier {
       _wasOffline = true;
     }
 
-    notifyListeners();
+    emit(ConnectivityLoaded());
   }
 
   // Mark that data has been refreshed
@@ -63,23 +65,23 @@ class ConnectivityService with ChangeNotifier {
     // When data is successfully refreshed, also clear the favorite server unavailable flag
     _isServerUnavailable = false;
 
-    notifyListeners();
+    emit(ConnectivityLoaded());
   }
 
   void setServerUnavailable() {
     _isServerUnavailable = true;
-    notifyListeners();
+    emit(ConnectivityLoaded());
   }
 
   // Reset server down status (call when server is back up)
   void resetServerStatus() {
     _isServerUnavailable = false;
-    notifyListeners();
+    emit(ConnectivityLoaded());
   }
 
   @override
-  void dispose() {
+  Future<void> close() {
     _connectivitySubscription?.cancel();
-    super.dispose();
+    return super.close();
   }
 }

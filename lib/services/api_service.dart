@@ -10,7 +10,7 @@ import 'package:shopspot/services/database_service.dart';
 
 class ApiService {
   // Base URL for the API
-  static const String baseUrl = 'http://192.168.1.4:8000/api';
+  static const String baseUrl = 'http://192.168.1.8:8000/api';
   // For physical devices using the same network, you might need to use your computer's IP address
   // Example: static const String baseUrl = 'http://192.168.1.4:8000/api';
   // Use 10.0.2.2 for Android emulator to connect to localhost
