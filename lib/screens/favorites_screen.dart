@@ -6,7 +6,7 @@ import 'package:shopspot/cubit/index_cubit/index_cubit.dart';
 import 'package:shopspot/cubit/restaurant_cubit/restaurant_state.dart';
 import 'package:shopspot/services/connectivity_service/connectivity_state.dart';
 import 'package:shopspot/utils/app_routes.dart';
-import 'package:shopspot/utils/utils.dart';
+import 'package:shopspot/utils/color_scheme_extension.dart';
 import 'package:shopspot/widgets/custom_search.dart';
 import 'package:shopspot/widgets/restaurant_card.dart';
 import 'package:shopspot/models/restaurant_model.dart';
@@ -67,10 +67,13 @@ class _DismissibleRestaurantCardState extends State<DismissibleRestaurantCard> {
             margin: const EdgeInsets.only(bottom: 16.0),
             alignment: Alignment.centerRight,
             padding: const EdgeInsets.only(right: 20.0),
-            color: Theme.of(context).colorScheme.error,
-            child: const Icon(
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.error,
+              borderRadius: BorderRadius.circular(8.0),
+            ),
+            child: Icon(
               Icons.delete,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onError,
             ),
           ),
           confirmDismiss: _isLoading || widget.isDismissing()
@@ -81,6 +84,7 @@ class _DismissibleRestaurantCardState extends State<DismissibleRestaurantCard> {
                     Fluttertoast.showToast(
                       msg: 'You are offline. Please check your connection.',
                       backgroundColor: Theme.of(context).colorScheme.error,
+                      textColor: Theme.of(context).colorScheme.onError,
                     );
                     return false;
                   }
@@ -90,7 +94,8 @@ class _DismissibleRestaurantCardState extends State<DismissibleRestaurantCard> {
                     Fluttertoast.showToast(
                       msg:
                           'Unable to connect to the server. Please try again later.',
-                      backgroundColor: getWarningColor(context),
+                      backgroundColor: Theme.of(context).colorScheme.warning,
+                      textColor: Theme.of(context).colorScheme.onWarning,
                     );
                     return false;
                   }
@@ -143,24 +148,28 @@ class _DismissibleRestaurantCardState extends State<DismissibleRestaurantCard> {
                   widget.restaurant, context);
 
               // Check if still mounted after async operation
-              if (!mounted) return;
+              if (!context.mounted) return;
 
               // Only proceed if the removal was successful
               if (success) {
                 // Also update the RestaurantCubit to maintain UI consistency
-                restaurantCubit.updateFavoriteStatus(
+                await restaurantCubit.updateFavoriteStatus(
                     widget.restaurant.id, false);
+
+                if (!context.mounted) return;
 
                 Fluttertoast.showToast(
                   msg: '${widget.restaurant.name} removed from favorites.',
-                  backgroundColor: getSuccessColor(context),
+                  backgroundColor: Theme.of(context).colorScheme.success,
+                  textColor: Theme.of(context).colorScheme.onSuccess,
                 );
               } else {
                 // If removal was not successful, show an error message
                 Fluttertoast.showToast(
                   msg:
                       'Unable to connect to the server. Please try again later.',
-                  backgroundColor: getWarningColor(context),
+                  backgroundColor: Theme.of(context).colorScheme.warning,
+                  textColor: Theme.of(context).colorScheme.onWarning,
                 );
 
                 // Reset the widget to prevent red screen errors
@@ -169,7 +178,8 @@ class _DismissibleRestaurantCardState extends State<DismissibleRestaurantCard> {
             } catch (e) {
               Fluttertoast.showToast(
                 msg: 'Something went wrong. Please try again.',
-                backgroundColor: getWarningColor(context),
+                backgroundColor: Theme.of(context).colorScheme.warning,
+                textColor: Theme.of(context).colorScheme.onWarning,
               );
 
               // Reset the widget to prevent red screen errors
@@ -189,7 +199,10 @@ class _DismissibleRestaurantCardState extends State<DismissibleRestaurantCard> {
           Positioned.fill(
             child: Container(
               margin: const EdgeInsets.only(bottom: 16.0),
-              color: Color.fromARGB(26, 0, 0, 0),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.onError,
+                borderRadius: BorderRadius.circular(8.0),
+              ),
               child: Center(
                 child: CircularProgressIndicator(
                   valueColor: AlwaysStoppedAnimation<Color>(
@@ -303,7 +316,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 child: Icon(
                   connectivity.isOnline ? Icons.wifi : Icons.wifi_off,
                   color: connectivity.isOnline
-                      ? getSuccessColor(context)
+                      ? Theme.of(context).colorScheme.success
                       : Theme.of(context).colorScheme.error,
                 ),
               );

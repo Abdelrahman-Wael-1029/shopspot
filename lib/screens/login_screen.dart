@@ -4,7 +4,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shopspot/cubit/auth_cubit/auth_state.dart';
 import 'package:shopspot/utils/app_routes.dart';
 import 'package:shopspot/cubit/auth_cubit/auth_cubit.dart';
-import 'package:shopspot/utils/utils.dart';
+import 'package:shopspot/utils/color_scheme_extension.dart';
 import 'package:shopspot/widgets/custom_button.dart';
 import 'package:shopspot/widgets/custom_text_field.dart';
 
@@ -67,34 +67,27 @@ class _LoginScreenState extends State<LoginScreen> {
       _emailController.text,
       _passwordController.text,
     );
-    if (success) {
+    if (success && mounted) {
       Fluttertoast.showToast(
         msg: "Login successful",
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
-        backgroundColor: getSuccessColor(context),
-        textColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.success,
+        textColor: Theme.of(context).colorScheme.onSuccess,
       );
-
-      if (mounted) {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          AppRoutes.home,
-          (routes) => false,
-        );
-      }
-    } else {
-      if (mounted) {
-        Fluttertoast.showToast(
-          msg: (authCubit.state is AuthError)
-              ? (authCubit.state as AuthError).message
-              : "Login failedddd",
-          toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.BOTTOM,
-          backgroundColor: Theme.of(context).colorScheme.error,
-          textColor: Colors.white,
-        );
-      }
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.home,
+        (routes) => false,
+      );
+    } else if (mounted) {
+      Fluttertoast.showToast(
+        msg: (authCubit.state is AuthError)
+            ? (authCubit.state as AuthError).message
+            : "Login failed",
+        backgroundColor: Theme.of(context).colorScheme.error,
+        textColor: Theme.of(context).colorScheme.onError,
+      );
     }
   }
 

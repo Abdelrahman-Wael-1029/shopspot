@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:shopspot/cubit/location_cubit/location_state.dart';
 import 'package:shopspot/cubit/restaurant_cubit/restaurant_cubit.dart';
-import 'package:shopspot/utils/utils.dart';
+import 'package:shopspot/utils/color_scheme_extension.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shopspot/models/restaurant_model.dart';
@@ -29,159 +30,174 @@ class _RestaurantLocationWidgetState extends State<RestaurantLocationWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final locationCubit = context.read<LocationCubit>();
-    distance = locationCubit.getDistanceSync(widget.restaurant);
-    final hasUserLocation = locationCubit.currentLocation != null;
+    return BlocConsumer<LocationCubit, LocationState>(
+      listenWhen: (previous, current) {
+        // Just check if the state indicates location was updated
+        return current is LocationLoaded && (previous is LocationLoading || previous is LocationError || previous is LocationInitial);
+      },
+      listener: (context, state) {
+        // Location has changed, update the map
+        final locationCubit = context.read<LocationCubit>();
+        if (locationCubit.currentLocation != null) {
+          _fitBothLocations(locationCubit);
+        }
+      },
+      builder: (context, state) {
+        final locationCubit = context.read<LocationCubit>();
+        distance = locationCubit.getDistanceSync(widget.restaurant);
+        final hasUserLocation = locationCubit.currentLocation != null;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Mini map
-          SizedBox(
-            height: 200,
-            width: double.infinity,
-            child: Stack(
-              children: [
-                FlutterMap(
-                  mapController: _mapController,
-                  options: MapOptions(
-                    initialCenter: LatLng(widget.restaurant.latitude,
-                        widget.restaurant.longitude),
-                    initialZoom: 14,
-                    onMapReady: () {
-                      if (hasUserLocation) {
-                        _fitBothLocations(locationCubit);
-                      }
-                    },
-                  ),
+        return Card(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Mini map
+              SizedBox(
+                height: 200,
+                width: double.infinity,
+                child: Stack(
                   children: [
-                    TileLayer(
-                      urlTemplate:
-                          'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
-                      subdomains: const ['a', 'b', 'c'],
-                      userAgentPackageName: 'com.example.shopspot',
+                    FlutterMap(
+                      mapController: _mapController,
+                      options: MapOptions(
+                        initialCenter: LatLng(widget.restaurant.latitude,
+                            widget.restaurant.longitude),
+                        initialZoom: 14,
+                        onMapReady: () {
+                          if (hasUserLocation) {
+                            _fitBothLocations(locationCubit);
+                          }
+                        },
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate:
+                              'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+                          subdomains: const ['a', 'b', 'c'],
+                          userAgentPackageName: 'com.example.shopspot',
+                        ),
+                        MarkerLayer(
+                          markers: [
+                            // Restaurant marker
+                            Marker(
+                              point: LatLng(widget.restaurant.latitude,
+                                  widget.restaurant.longitude),
+                              width: 40,
+                              height: 40,
+                              child: Icon(
+                                Icons.restaurant,
+                                color: Theme.of(context).colorScheme.error,
+                                size: 30,
+                              ),
+                            ),
+                            // Current location marker (if available)
+                            if (hasUserLocation)
+                              Marker(
+                                point: LatLng(
+                                  locationCubit.currentLocation!.latitude,
+                                  locationCubit.currentLocation!.longitude,
+                                ),
+                                width: 40,
+                                height: 40,
+                                child: const Icon(
+                                  Icons.my_location,
+                                  color: Colors.blue,
+                                  size: 20,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
                     ),
-                    MarkerLayer(
-                      markers: [
-                        // Restaurant marker
-                        Marker(
-                          point: LatLng(widget.restaurant.latitude,
-                              widget.restaurant.longitude),
-                          width: 40,
-                          height: 40,
-                          child: Icon(
-                            Icons.restaurant,
-                            color: Theme.of(context).colorScheme.error,
-                            size: 30,
+                    // Distance indicator
+                    if (distance != null)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.directions_walk,
+                                color: Colors.blue,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                locationCubit.formatDistance(distance!),
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        // Current location marker (if available)
-                        if (hasUserLocation)
-                          Marker(
-                            point: LatLng(
-                              locationCubit.currentLocation!.latitude,
-                              locationCubit.currentLocation!.longitude,
-                            ),
-                            width: 40,
-                            height: 40,
-                            child: const Icon(
-                              Icons.my_location,
-                              color: Colors.blue,
-                              size: 20,
-                            ),
-                          ),
-                      ],
+                      ),
+                    // Refresh button overlay
+                    Positioned(
+                      bottom: 8,
+                      right: 8,
+                      child: FloatingActionButton.small(
+                        onPressed: _isRefreshing
+                            ? null
+                            : () => _refreshLocation(locationCubit),
+                        child: _isRefreshing
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.refresh, size: 18),
+                      ),
                     ),
                   ],
                 ),
-                // Distance indicator
-                if (distance != null)
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.directions_walk,
-                            color: Colors.blue,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            locationCubit.formatDistance(distance!),
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                // Refresh button overlay
-                Positioned(
-                  bottom: 8,
-                  right: 8,
-                  child: FloatingActionButton.small(
-                    onPressed: _isRefreshing
-                        ? null
-                        : () => _refreshLocation(locationCubit),
-                    child: _isRefreshing
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Icon(Icons.refresh, size: 18),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Get directions button
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.directions),
-                label: const Text('Get Directions'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12.0),
-                ),
-                onPressed: () {
-                  launchUrl(Uri.parse(
-                    'https://www.google.com/maps/dir/?api=1&destination=${widget.restaurant.latitude},${widget.restaurant.longitude}&travelmode=driving',
-                  ));
-                },
               ),
-            ),
+
+              // Get directions button
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.directions),
+                    label: const Text('Get Directions'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12.0),
+                    ),
+                    onPressed: () {
+                      launchUrl(Uri.parse(
+                        'https://www.google.com/maps/dir/?api=1&destination=${widget.restaurant.latitude},${widget.restaurant.longitude}&travelmode=driving',
+                      ));
+                    },
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -234,10 +250,13 @@ class _RestaurantLocationWidgetState extends State<RestaurantLocationWidget> {
       final hasPermission =
           await LocationCubit.checkLocationPermission(request: true);
       if (!hasPermission) {
-        Fluttertoast.showToast(
-          msg: 'Location permission denied. Please enable in settings.',
-          backgroundColor: Theme.of(context).colorScheme.error,
-        );
+        if (mounted) {
+          Fluttertoast.showToast(
+            msg: 'Location permission denied. Please enable in settings.',
+            backgroundColor: Theme.of(context).colorScheme.error,
+            textColor: Theme.of(context).colorScheme.onError,
+          );
+        }
         return;
       }
 
@@ -252,15 +271,21 @@ class _RestaurantLocationWidgetState extends State<RestaurantLocationWidget> {
         distance = locationCubit.getDistanceSync(widget.restaurant);
       }
 
-      Fluttertoast.showToast(
-        msg: 'Location updated',
-        backgroundColor: getSuccessColor(context),
-      );
+      if (mounted) {
+        Fluttertoast.showToast(
+          msg: 'Location updated',
+          backgroundColor: Theme.of(context).colorScheme.success,
+          textColor: Theme.of(context).colorScheme.onSuccess,
+        );
+      }
     } catch (e) {
-      Fluttertoast.showToast(
-        msg: 'Failed to update location',
-        backgroundColor: Theme.of(context).colorScheme.error,
-      );
+      if (mounted) {
+        Fluttertoast.showToast(
+          msg: 'Failed to update location',
+          backgroundColor: Theme.of(context).colorScheme.error,
+          textColor: Theme.of(context).colorScheme.onError,
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {

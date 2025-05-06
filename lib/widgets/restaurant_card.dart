@@ -10,7 +10,7 @@ import 'package:shopspot/cubit/location_cubit/location_cubit.dart';
 import 'package:shopspot/services/connectivity_service/connectivity_service.dart';
 import 'package:shopspot/cubit/favorite_cubit/favorite_cubit.dart';
 import 'package:shopspot/cubit/restaurant_cubit/restaurant_cubit.dart';
-import 'package:shopspot/utils/utils.dart';
+import 'package:shopspot/utils/color_scheme_extension.dart';
 
 class RestaurantCardSkeleton extends StatelessWidget {
   const RestaurantCardSkeleton({super.key});
@@ -293,6 +293,7 @@ class _FavoriteButtonState extends State<FavoriteButton> {
       Fluttertoast.showToast(
         msg: 'You are offline. Please check your connection.',
         backgroundColor: Theme.of(context).colorScheme.error,
+        textColor: Theme.of(context).colorScheme.onError,
       );
       return;
     }
@@ -302,7 +303,8 @@ class _FavoriteButtonState extends State<FavoriteButton> {
       // Show toast message when server is unavailable
       Fluttertoast.showToast(
         msg: 'Unable to connect to the server. Please try again later.',
-        backgroundColor: getWarningColor(context),
+        backgroundColor: Theme.of(context).colorScheme.warning,
+        textColor: Theme.of(context).colorScheme.onWarning,
       );
       return;
     }
@@ -335,19 +337,23 @@ class _FavoriteButtonState extends State<FavoriteButton> {
         restaurantCubit.updateFavoriteStatus(
             widget.restaurant.id, !isFavorite // Toggle current state
             );
-      } else {
+      } else if (mounted) {
         // Show toast message that there was a problem connecting to the server
         Fluttertoast.showToast(
           msg: 'Unable to connect to the server. Please try again later.',
-          backgroundColor: getWarningColor(context),
+          backgroundColor: Theme.of(context).colorScheme.warning,
+          textColor: Theme.of(context).colorScheme.onWarning,
         );
       }
     } catch (e) {
-      // Show error message
-      Fluttertoast.showToast(
-        msg: 'Something went wrong. Please try again.',
-        backgroundColor: getWarningColor(context),
-      );
+      if (mounted) {
+        // Show error message
+        Fluttertoast.showToast(
+          msg: 'Something went wrong. Please try again.',
+          backgroundColor: Theme.of(context).colorScheme.warning,
+          textColor: Theme.of(context).colorScheme.onWarning,
+        );
+      }
     } finally {
       // Reset loading state
       setState(() {

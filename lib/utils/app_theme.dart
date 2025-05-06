@@ -72,7 +72,7 @@ class AppTheme {
     ),
     cardTheme: CardTheme(
       color: AppColors.surfaceLight,
-      shadowColor: Colors.black.withOpacity(0.2),
+      shadowColor: Colors.black.withValues(alpha: 0.2),
       elevation: 2,
     ),
     switchTheme: SwitchThemeData(
@@ -84,9 +84,9 @@ class AppTheme {
       }),
       trackColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) {
-          return AppColors.primaryLight.withOpacity(0.5);
+          return AppColors.primaryLight.withValues(alpha: 0.5);
         }
-        return AppColors.disabledLight.withOpacity(0.5);
+        return AppColors.disabledLight.withValues(alpha: 0.5);
       }),
     ),
     checkboxTheme: CheckboxThemeData(
@@ -193,7 +193,7 @@ class AppTheme {
     ),
     cardTheme: CardTheme(
       color: AppColors.surfaceDark,
-      shadowColor: Colors.black.withOpacity(0.5),
+      shadowColor: Colors.black.withValues(alpha: 0.5),
       elevation: 2,
     ),
     switchTheme: SwitchThemeData(
@@ -205,9 +205,9 @@ class AppTheme {
       }),
       trackColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) {
-          return AppColors.accentDark.withOpacity(0.5);
+          return AppColors.accentDark.withValues(alpha: 0.5);
         }
-        return AppColors.disabledDark.withOpacity(0.5);
+        return AppColors.disabledDark.withValues(alpha: 0.5);
       }),
     ),
     checkboxTheme: CheckboxThemeData(

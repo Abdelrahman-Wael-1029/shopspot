@@ -7,7 +7,7 @@ import 'package:shopspot/utils/app_routes.dart';
 import 'package:shopspot/models/restaurant_model.dart';
 import 'package:shopspot/cubit/favorite_cubit/favorite_cubit.dart';
 import 'package:shopspot/cubit/restaurant_cubit/restaurant_cubit.dart';
-import 'package:shopspot/utils/utils.dart';
+import 'package:shopspot/utils/color_scheme_extension.dart';
 import 'package:shopspot/widgets/restaurant_location_widget.dart';
 
 class RestaurantDetailsScreen extends StatefulWidget {
@@ -33,12 +33,7 @@ class _RestaurantDetailsScreenState extends State<RestaurantDetailsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          widget.restaurant.name,
-          style: TextStyle(
-            fontSize: 20
-          )
-        ),
+        title: Text(widget.restaurant.name, style: TextStyle(fontSize: 20)),
         actions: [
           // Favorite button
           _isLoading
@@ -57,7 +52,8 @@ class _RestaurantDetailsScreenState extends State<RestaurantDetailsScreen> {
               : IconButton(
                   icon: Icon(
                     isFavorite ? Icons.favorite : Icons.favorite_border,
-                    color: isFavorite ?Theme.of(context).colorScheme.error : null,
+                    color:
+                        isFavorite ? Theme.of(context).colorScheme.error : null,
                   ),
                   onPressed: () => _updateFavoriteStatus(isFavorite),
                 ),
@@ -122,9 +118,10 @@ class _RestaurantDetailsScreenState extends State<RestaurantDetailsScreen> {
                       icon: const Icon(Icons.shopping_bag),
                       label: const Text('View Products'),
                       style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 16.0),
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
                       ),
                       onPressed: () {
                         Navigator.pushNamed(
@@ -155,6 +152,7 @@ class _RestaurantDetailsScreenState extends State<RestaurantDetailsScreen> {
       Fluttertoast.showToast(
         msg: 'You are offline. Please check your connection.',
         backgroundColor: Theme.of(context).colorScheme.error,
+        textColor: Theme.of(context).colorScheme.onError,
       );
       return;
     }
@@ -164,7 +162,8 @@ class _RestaurantDetailsScreenState extends State<RestaurantDetailsScreen> {
       // Show toast message when server is unavailable
       Fluttertoast.showToast(
         msg: 'Unable to connect to the server. Please try again later.',
-        backgroundColor:getWarningColor(context),
+        backgroundColor: Theme.of(context).colorScheme.warning,
+        textColor: Theme.of(context).colorScheme.onWarning,
       );
       return;
     }
@@ -192,19 +191,23 @@ class _RestaurantDetailsScreenState extends State<RestaurantDetailsScreen> {
         restaurantCubit.updateFavoriteStatus(
             widget.restaurant.id, !isFavorite // Toggle the current state
             );
-      } else {
+      } else if (mounted) {
         // Show toast message that there was a problem connecting to the server
         Fluttertoast.showToast(
           msg: 'Unable to connect to the server. Please try again later.',
-          backgroundColor: getWarningColor(context),
+          backgroundColor: Theme.of(context).colorScheme.warning,
+          textColor: Theme.of(context).colorScheme.onWarning,
         );
       }
     } catch (e) {
-      // Show error message
-      Fluttertoast.showToast(
-        msg: 'Something went wrong. Please try again.',
-        backgroundColor: getWarningColor(context),
-      );
+      if (mounted) {
+        // Show error message
+        Fluttertoast.showToast(
+          msg: 'Something went wrong. Please try again.',
+          backgroundColor: Theme.of(context).colorScheme.warning,
+          textColor: Theme.of(context).colorScheme.onWarning,
+        );
+      }
     } finally {
       // Always reset loading state if mounted
       if (mounted) {

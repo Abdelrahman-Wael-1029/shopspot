@@ -8,7 +8,7 @@ import 'package:shopspot/utils/app_routes.dart';
 import 'package:shopspot/models/user_model.dart';
 import 'package:shopspot/cubit/auth_cubit/auth_cubit.dart';
 import 'package:shopspot/services/connectivity_service/connectivity_service.dart';
-import 'package:shopspot/utils/utils.dart';
+import 'package:shopspot/utils/color_scheme_extension.dart';
 import 'package:shopspot/widgets/custom_button.dart';
 import 'package:shopspot/widgets/custom_text_field.dart';
 
@@ -80,6 +80,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       Fluttertoast.showToast(
         msg: "You are offline. Showing cached profile data.",
         backgroundColor: Theme.of(context).colorScheme.error,
+        textColor: Theme.of(context).colorScheme.onError,
       );
     }
   }
@@ -105,10 +106,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         });
       }
     } catch (e) {
-      Fluttertoast.showToast(
-        msg: "Unable to access camera or gallery. Please try again.",
-        backgroundColor: Theme.of(context).colorScheme.error,
-      );
+      if (mounted) {
+        Fluttertoast.showToast(
+          msg: "Unable to access camera or gallery. Please try again.",
+          backgroundColor: Theme.of(context).colorScheme.error,
+          textColor: Theme.of(context).colorScheme.onError,
+        );
+      }
     }
   }
 
@@ -224,22 +228,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (success) {
-      Fluttertoast.showToast(
-        msg: "Profile updated successfully",
-        backgroundColor: getSuccessColor(context),
-      );
+      if (mounted) {
+        Fluttertoast.showToast(
+          msg: "Profile updated successfully",
+          backgroundColor: Theme.of(context).colorScheme.success,
+          textColor: Theme.of(context).colorScheme.onSuccess,
+        );
+      }
 
       setState(() {
         _isEditing = false;
         _passwordController.clear();
         _confirmPasswordController.clear();
       });
-    } else {
+    } else if (mounted) {
       Fluttertoast.showToast(
         msg: authCubit.state is AuthError
             ? (authCubit.state as AuthError).message
             : "Something went wrong. Please try again.",
-        backgroundColor: getWarningColor(context),
+        backgroundColor: Theme.of(context).colorScheme.warning,
+        textColor: Theme.of(context).colorScheme.onWarning,
       );
     }
   }

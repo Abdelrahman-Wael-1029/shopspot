@@ -4,7 +4,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shopspot/cubit/auth_cubit/auth_state.dart';
 import 'package:shopspot/utils/app_routes.dart';
 import 'package:shopspot/cubit/auth_cubit/auth_cubit.dart';
-import 'package:shopspot/utils/utils.dart';
+import 'package:shopspot/utils/color_scheme_extension.dart';
 import 'package:shopspot/widgets/custom_button.dart';
 import 'package:shopspot/widgets/custom_text_field.dart';
 
@@ -107,77 +107,74 @@ class _SignupScreenState extends State<SignupScreen> {
       level: _level,
     );
 
-    if (success) {
+    if (success && mounted) {
       Fluttertoast.showToast(
         msg: "Signup successful",
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
-        backgroundColor: getSuccessColor(context),
-        textColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.success,
+        textColor: Theme.of(context).colorScheme.onSuccess,
       );
 
-      if (mounted) {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          AppRoutes.home,
-          (routes) => false,
-        );
-      }
-    } else {
-      if (mounted) {
-        // Get validation errors from the response
-        final validationErrors = authCubit.validationErrors;
-        String errorMessage = authCubit.state is AuthError
-            ? (authCubit.state as AuthError).message
-            : "Unable to create account. Please check your information and try again.";
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.home,
+        (routes) => false,
+      );
+    } else if (mounted) {
+      // Get validation errors from the response
+      final validationErrors = authCubit.validationErrors;
+      String errorMessage = authCubit.state is AuthError
+          ? (authCubit.state as AuthError).message
+          : "Unable to create account. Please check your information and try again.";
 
-        // Clear previous field errors
+      // Clear previous field errors
+      setState(() {
+        _nameError = null;
+        _emailError = null;
+        _passwordError = null;
+        _confirmPasswordError = null;
+      });
+
+      // Process validation errors directly from the API response
+      if (validationErrors != null) {
         setState(() {
-          _nameError = null;
-          _emailError = null;
-          _passwordError = null;
-          _confirmPasswordError = null;
+          // Map server validation errors to specific form fields
+          if (validationErrors.containsKey('name')) {
+            _nameError = validationErrors['name'][0];
+          }
+
+          if (validationErrors.containsKey('email')) {
+            _emailError = validationErrors['email'][0];
+            // Make error message more user-friendly
+            if (_emailError!.contains("has already been taken")) {
+              _emailError = "This email is already registered";
+            }
+          }
+
+          if (validationErrors.containsKey('password')) {
+            _passwordError = validationErrors['password'][0];
+          }
+
+          if (validationErrors.containsKey('password_confirmation')) {
+            _confirmPasswordError =
+                validationErrors['password_confirmation'][0];
+          }
         });
 
-        // Process validation errors directly from the API response
-        if (validationErrors != null) {
-          setState(() {
-            // Map server validation errors to specific form fields
-            if (validationErrors.containsKey('name')) {
-              _nameError = validationErrors['name'][0];
-            }
-
-            if (validationErrors.containsKey('email')) {
-              _emailError = validationErrors['email'][0];
-              // Make error message more user-friendly
-              if (_emailError!.contains("has already been taken")) {
-                _emailError = "This email is already registered";
-              }
-            }
-
-            if (validationErrors.containsKey('password')) {
-              _passwordError = validationErrors['password'][0];
-            }
-
-            if (validationErrors.containsKey('password_confirmation')) {
-              _confirmPasswordError =
-                  validationErrors['password_confirmation'][0];
-            }
-          });
-
-          // Set a more user-friendly error message for the toast
-          if (validationErrors.containsKey('email') &&
-              validationErrors['email'][0].contains("has already been taken")) {
-            errorMessage =
-                "Email already registered. Please use a different email.";
-          }
+        // Set a more user-friendly error message for the toast
+        if (validationErrors.containsKey('email') &&
+            validationErrors['email'][0].contains("has already been taken")) {
+          errorMessage =
+              "Email already registered. Please use a different email.";
         }
-
-        Fluttertoast.showToast(
-          msg: errorMessage,
-          backgroundColor: Theme.of(context).colorScheme.error,
-        );
       }
+
+      Fluttertoast.showToast(
+        msg: errorMessage,
+        backgroundColor: Theme.of(context).colorScheme.error,
+        textColor: Theme.of(context).colorScheme.onError,
+      );
     }
   }
 

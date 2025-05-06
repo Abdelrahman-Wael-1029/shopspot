@@ -8,7 +8,7 @@ import 'package:shopspot/services/connectivity_service/connectivity_service.dart
 import 'package:shopspot/services/database_service.dart';
 import 'package:shopspot/cubit/location_cubit/location_cubit.dart';
 import 'package:shopspot/cubit/product_cubit/product_cubit.dart';
-import 'package:shopspot/utils/utils.dart';
+import 'package:shopspot/utils/color_scheme_extension.dart';
 
 import 'restaurant_state.dart';
 
@@ -19,6 +19,7 @@ class RestaurantCubit extends Cubit<RestaurantState> {
   final Map<int, bool> _isLoadingProductRestaurants = {};
   String? _productsError;
   bool _hasBeenInitialized = false;
+  final Map<int, bool> _hasBeenInitializedProductRestaurants = {};
 
   List<Restaurant> get restaurants => _restaurants;
   String? get productsError => _productsError;
@@ -66,12 +67,16 @@ class RestaurantCubit extends Cubit<RestaurantState> {
     } finally {
       if (!serverIsAvailable || (serverIsAvailable && !result['success'])) {
         if (hasCachedData) {
+          if (context.mounted) refreshRestaurantsDistances(context);
+          _hasBeenInitialized = true;
+          emit(RestaurantLoaded());
           _restaurants = cachedRestaurants;
 
           if (context.mounted) {
             Fluttertoast.showToast(
               msg: 'Unable to connect to the server. Using cached data.',
-              backgroundColor: getWarningColor(context),
+              backgroundColor: Theme.of(context).colorScheme.warning,
+              textColor: Theme.of(context).colorScheme.onWarning,
             );
           }
         } else {
@@ -80,13 +85,7 @@ class RestaurantCubit extends Cubit<RestaurantState> {
               : 'You are offline. Please check your connection.'));
         }
       }
-
-      if (context.mounted) refreshRestaurantsDistances(context);
-
-      _hasBeenInitialized = true;
-      emit(RestaurantLoaded());
     }
-
     return false;
   }
 
@@ -99,6 +98,37 @@ class RestaurantCubit extends Cubit<RestaurantState> {
     final locationCubit = context.read<LocationCubit>();
     for (var restaurant in _restaurants) {
       await locationCubit.getDistance(restaurant);
+    }
+  }
+
+  Future<void> refreshData(BuildContext context) async {
+    final connectivityService = context.read<ConnectivityService>();
+
+    emit(RestaurantLoading());
+
+    // Always use server data when explicitly refreshing
+    bool success = false;
+
+    // Only try to refresh from server if we're online
+    if (connectivityService.isOnline) {
+      success = await refreshRestaurants(context);
+
+      // Mark that we've refreshed the data
+      if (success) {
+        connectivityService.markRefreshed();
+      }
+    } else {
+      emit(RestaurantError('You are offline. Please check your connection.'));
+
+      // Check if still mounted before accessing context
+      if (!context.mounted) return;
+
+      // Show toast or alert that we're offline
+      Fluttertoast.showToast(
+        msg: 'You are offline. Please check your connection.',
+        backgroundColor: Theme.of(context).colorScheme.error,
+        textColor: Theme.of(context).colorScheme.onError,
+      );
     }
   }
 
@@ -132,13 +162,22 @@ class RestaurantCubit extends Cubit<RestaurantState> {
     return _isLoadingProductRestaurants[productId] ?? false;
   }
 
+  bool hasBeenInitializedProductRestaurants(int productId) {
+    return _hasBeenInitializedProductRestaurants[productId] ?? false;
+  }
+
   Future<List<Restaurant>> getRestaurantsByProductId(
       BuildContext context, int productId) async {
     _isLoadingProductRestaurants[productId] = true;
     emit(RestaurantLoading());
 
     final connectivityService = context.read<ConnectivityService>();
-    final restaurants = DatabaseService.getRestaurantsByProductId(productId);
+    List<Restaurant> restaurants = [];
+
+    if (_hasBeenInitializedProductRestaurants[productId] == true) {
+      restaurants = DatabaseService.getRestaurantsByProductId(productId);
+    }
+
     if (restaurants.isNotEmpty) {
       _productsError = null;
       _isLoadingProductRestaurants[productId] = false;
@@ -169,7 +208,7 @@ class RestaurantCubit extends Cubit<RestaurantState> {
           connectivityService.markRefreshed();
 
           _productsError = null;
-          _isLoadingProductRestaurants[productId] = false;
+          _hasBeenInitializedProductRestaurants[productId] = true;
           emit(RestaurantLoaded());
           return serverRestaurants;
         }
@@ -187,35 +226,5 @@ class RestaurantCubit extends Cubit<RestaurantState> {
     }
 
     return [];
-  }
-
-  Future<void> refreshData(BuildContext context) async {
-    final connectivityService = context.read<ConnectivityService>();
-
-    emit(RestaurantLoading());
-
-    // Always use server data when explicitly refreshing
-    bool success = false;
-
-    // Only try to refresh from server if we're online
-    if (connectivityService.isOnline) {
-      success = await refreshRestaurants(context);
-
-      // Mark that we've refreshed the data
-      if (success) {
-        connectivityService.markRefreshed();
-      }
-    } else {
-      emit(RestaurantError('You are offline. Please check your connection.'));
-
-      // Check if still mounted before accessing context
-      if (!context.mounted) return;
-
-      // Show toast or alert that we're offline
-      Fluttertoast.showToast(
-        msg: 'You are offline. Please check your connection.',
-        backgroundColor: Theme.of(context).colorScheme.error,
-      );
-    }
   }
 }

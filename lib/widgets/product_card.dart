@@ -35,7 +35,7 @@ class ProductCardSkeleton extends StatelessWidget {
 
             // Product name only
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(8.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -185,7 +185,7 @@ class _ProductCardState extends State<ProductCard> {
                           color: Colors.amber,
                         ),
                         itemCount: 5,
-                        itemSize: 12.0,
+                        itemSize: 13.0,
                         direction: Axis.horizontal,
                       ),
                     ],

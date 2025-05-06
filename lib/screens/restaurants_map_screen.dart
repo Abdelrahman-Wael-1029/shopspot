@@ -3,8 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shopspot/cubit/location_cubit/location_cubit.dart';
+import 'package:shopspot/cubit/location_cubit/location_state.dart';
 import 'package:shopspot/utils/app_routes.dart';
-import 'package:shopspot/utils/utils.dart';
+import 'package:shopspot/utils/color_scheme_extension.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shopspot/models/restaurant_model.dart';
@@ -40,7 +41,7 @@ class _RestaurantsMapScreenState extends State<RestaurantsMapScreen> {
         // Pre-calculate distance if available
         final locationCubit = context.read<LocationCubit>();
         final distance = locationCubit.getDistanceSync(restaurant);
-        final String distanceText =
+        final distanceText =
             distance != null ? locationCubit.formatDistance(distance) : '';
 
         return Marker(
@@ -207,10 +208,13 @@ class _RestaurantsMapScreenState extends State<RestaurantsMapScreen> {
       final hasPermission =
           await LocationCubit.checkLocationPermission(request: true);
       if (!hasPermission) {
-        Fluttertoast.showToast(
-          msg: 'Location permission denied. Please enable in settings.',
-          backgroundColor: Theme.of(context).colorScheme.error,
-        );
+        if (mounted) {
+          Fluttertoast.showToast(
+            msg: 'Location permission denied. Please enable in settings.',
+            backgroundColor: Theme.of(context).colorScheme.error,
+            textColor: Theme.of(context).colorScheme.onError,
+          );
+        }
         return;
       }
 
@@ -222,116 +226,123 @@ class _RestaurantsMapScreenState extends State<RestaurantsMapScreen> {
       // Fit bounds to include new location
       _fitBounds();
 
-      Fluttertoast.showToast(
-        msg: 'Location updated',
-        backgroundColor: getSuccessColor(context),
-      );
-    } catch (e) {
-      debugPrint('Error refreshing location: $e');
-      Fluttertoast.showToast(
-        msg: 'Failed to update location',
-        backgroundColor: Theme.of(context).colorScheme.error,
-      );
-    } finally {
       if (mounted) {
-        setState(() {
-          _isRefreshing = false;
-        });
+        Fluttertoast.showToast(
+          msg: 'Location updated',
+          backgroundColor: Theme.of(context).colorScheme.success,
+          textColor: Theme.of(context).colorScheme.onSuccess,
+        );
       }
+    } catch (e) {
+      if (mounted) {
+        Fluttertoast.showToast(
+          msg: 'Failed to update location',
+          backgroundColor: Theme.of(context).colorScheme.error,
+          textColor: Theme.of(context).colorScheme.onError,
+        );
+      }
+    } finally {
+      setState(() {
+        _isRefreshing = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final locationCubit = context.read<LocationCubit>();
+    return BlocConsumer<LocationCubit, LocationState>(
+      listenWhen: (previous, current) {
+        // Just check if the state indicates location was updated
+        return current is LocationLoaded && (previous is LocationLoading || 
+            previous is LocationError || previous is LocationInitial);
+      },
+      listener: (context, state) {
+        // Location has changed, update the map
+        final locationCubit = context.read<LocationCubit>();
+        if (locationCubit.currentLocation != null) {
+          _createMarkers();
+          _fitBounds(includeUserLocation: true);
+        }
+      },
+      builder: (context, state) {
+        final locationCubit = context.read<LocationCubit>();
 
-    if (widget.restaurants.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text('Restaurants for ${widget.productName}'),
-        ),
-        body: const Center(
-          child: Text('No restaurants available'),
-        ),
-      );
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Restaurants for ${widget.productName}',
-          style:  TextStyle(
-            fontSize: 18
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(
+              'Restaurants for ${widget.productName}',
+              style: TextStyle(fontSize: 18),
+            ),
+            actions: [
+              _isRefreshing
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                          ),
+                        ),
+                      ),
+                    )
+                  : IconButton(
+                      icon: const Icon(Icons.refresh),
+                      tooltip: 'Refresh location',
+                      onPressed: _refreshLocation,
+                    ),
+            ],
           ),
-        ),
-        actions: [
-          _isRefreshing
-              ? const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Center(
-                    child: SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
+          body: FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: LatLng(
+                widget.restaurants.first.latitude,
+                widget.restaurants.first.longitude,
+              ),
+              initialZoom: 12,
+              onMapReady: () {
+                Future.delayed(
+                    const Duration(milliseconds: 200), () => _fitBounds());
+              },
+            ),
+            children: [
+              TileLayer(
+                urlTemplate:
+                    'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+                subdomains: const ['a', 'b', 'c'],
+                userAgentPackageName: 'com.example.shopspot',
+              ),
+              if (_markers != null) MarkerLayer(markers: _markers!),
+              // Current Location Marker
+              if (locationCubit.currentLocation != null)
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: LatLng(
+                        locationCubit.currentLocation!.latitude,
+                        locationCubit.currentLocation!.longitude,
+                      ),
+                      width: 40,
+                      height: 40,
+                      child: const Icon(
+                        Icons.my_location,
+                        color: Colors.blue,
+                        size: 20,
                       ),
                     ),
-                  ),
-                )
-              : IconButton(
-                  icon: const Icon(Icons.refresh),
-                  tooltip: 'Refresh location',
-                  onPressed: _refreshLocation,
+                  ],
                 ),
-        ],
-      ),
-      body: FlutterMap(
-        mapController: _mapController,
-        options: MapOptions(
-          initialCenter: LatLng(
-            widget.restaurants.first.latitude,
-            widget.restaurants.first.longitude,
+            ],
           ),
-          initialZoom: 12,
-          onMapReady: () {
-            Future.delayed(
-                const Duration(milliseconds: 200), () => _fitBounds());
-          },
-        ),
-        children: [
-          TileLayer(
-            urlTemplate:
-                'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
-            subdomains: const ['a', 'b', 'c'],
-            userAgentPackageName: 'com.example.shopspot',
+          floatingActionButton: FloatingActionButton(
+            onPressed: () => _fitBounds(),
+            tooltip: 'Fit all markers',
+            child: const Icon(Icons.fullscreen),
           ),
-          if (_markers != null) MarkerLayer(markers: _markers!),
-          // Current Location Marker
-          if (locationCubit.currentLocation != null)
-            MarkerLayer(
-              markers: [
-                Marker(
-                  point: LatLng(
-                    locationCubit.currentLocation!.latitude,
-                    locationCubit.currentLocation!.longitude,
-                  ),
-                  width: 40,
-                  height: 40,
-                  child: const Icon(
-                    Icons.my_location,
-                    color: Colors.blue,
-                    size: 20,
-                  ),
-                ),
-              ],
-            ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _fitBounds(),
-        tooltip: 'Fit all markers',
-        child: const Icon(Icons.fullscreen),
-      ),
+        );
+      },
     );
   }
 }

@@ -9,7 +9,7 @@ import 'package:shopspot/models/user_model.dart';
 import 'package:shopspot/services/api_service.dart';
 import 'package:shopspot/services/database_service.dart';
 import 'package:shopspot/services/connectivity_service/connectivity_service.dart';
-import 'package:shopspot/utils/utils.dart';
+import 'package:shopspot/utils/color_scheme_extension.dart';
 
 class AuthCubit extends Cubit<AuthState> {
   User? _user;
@@ -170,7 +170,8 @@ class AuthCubit extends Cubit<AuthState> {
           if (context.mounted) {
             Fluttertoast.showToast(
               msg: 'Unable to connect to the server. Using cached data.',
-              backgroundColor: getWarningColor(context),
+              backgroundColor: Theme.of(context).colorScheme.warning,
+              textColor: Theme.of(context).colorScheme.onWarning,
             );
           }
         } else {

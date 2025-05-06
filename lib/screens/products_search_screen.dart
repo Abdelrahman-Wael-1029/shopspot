@@ -4,7 +4,7 @@ import 'package:shopspot/cubit/product_cubit/product_state.dart';
 import 'package:shopspot/services/connectivity_service/connectivity_service.dart';
 import 'package:shopspot/services/connectivity_service/connectivity_state.dart';
 import 'package:shopspot/utils/app_routes.dart';
-import 'package:shopspot/utils/utils.dart';
+import 'package:shopspot/utils/color_scheme_extension.dart';
 import 'package:shopspot/widgets/custom_search.dart';
 import 'package:shopspot/widgets/product_search_card.dart';
 import 'package:shopspot/cubit/product_cubit/product_cubit.dart';
@@ -55,7 +55,7 @@ class _ProductsSearchScreenState extends State<ProductsSearchScreen> {
                 child: Icon(
                   connectivity.isOnline ? Icons.wifi : Icons.wifi_off,
                   color: connectivity.isOnline
-                      ? getSuccessColor(context)
+                      ? Theme.of(context).colorScheme.success
                       : Theme.of(context).colorScheme.error,
                 ),
               );

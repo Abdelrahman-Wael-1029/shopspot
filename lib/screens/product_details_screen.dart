@@ -4,7 +4,7 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:shopspot/models/product_model.dart';
 import 'package:shopspot/models/restaurant_model.dart';
 import 'package:shopspot/services/database_service.dart';
-import 'package:shopspot/utils/utils.dart';
+import 'package:shopspot/utils/color_scheme_extension.dart';
 
 class ProductDetailsScreen extends StatelessWidget {
   final Product product;
@@ -28,16 +28,14 @@ class ProductDetailsScreen extends StatelessWidget {
 
     // Status indicator colors
     final Map<String, Color> statusColors = {
-      'available':getSuccessColor(context),
+      'available': Theme.of(context).colorScheme.success,
+      'coming_soon': Theme.of(context).colorScheme.warning,
       'out_of_stock': Theme.of(context).colorScheme.error,
-      'coming_soon': getWarningColor(context),
     };
 
     // Format status for display
-    String formattedStatus = 'Unknown';
-    Color statusColor = Colors.grey;
-    formattedStatus = status.replaceAll('_', ' ').toUpperCase();
-    statusColor = statusColors[status] ?? Colors.grey;
+    String formattedStatus = status.replaceAll('_', ' ').toUpperCase();
+    Color statusColor = statusColors[status] ?? Colors.grey;
 
     return Scaffold(
       appBar: AppBar(
@@ -160,9 +158,9 @@ class ProductDetailsScreen extends StatelessWidget {
                           // Restaurant section
                           Row(
                             children: [
-                               Icon(
+                              Icon(
                                 Icons.restaurant,
-                                color:getWarningColor(context),
+                                color: Theme.of(context).colorScheme.warning,
                               ),
                               const SizedBox(width: 8),
                               Text(
