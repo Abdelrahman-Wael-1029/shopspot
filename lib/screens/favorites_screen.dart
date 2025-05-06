@@ -6,6 +6,7 @@ import 'package:shopspot/cubit/index_cubit/index_cubit.dart';
 import 'package:shopspot/cubit/restaurant_cubit/restaurant_state.dart';
 import 'package:shopspot/services/connectivity_service/connectivity_state.dart';
 import 'package:shopspot/utils/app_routes.dart';
+import 'package:shopspot/utils/utils.dart';
 import 'package:shopspot/widgets/custom_search.dart';
 import 'package:shopspot/widgets/restaurant_card.dart';
 import 'package:shopspot/models/restaurant_model.dart';
@@ -66,7 +67,7 @@ class _DismissibleRestaurantCardState extends State<DismissibleRestaurantCard> {
             margin: const EdgeInsets.only(bottom: 16.0),
             alignment: Alignment.centerRight,
             padding: const EdgeInsets.only(right: 20.0),
-            color: Colors.red,
+            color: Theme.of(context).colorScheme.error,
             child: const Icon(
               Icons.delete,
               color: Colors.white,
@@ -79,7 +80,7 @@ class _DismissibleRestaurantCardState extends State<DismissibleRestaurantCard> {
                     // Show toast message when offline
                     Fluttertoast.showToast(
                       msg: 'You are offline. Please check your connection.',
-                      backgroundColor: Colors.red,
+                      backgroundColor: Theme.of(context).colorScheme.error,
                     );
                     return false;
                   }
@@ -89,7 +90,7 @@ class _DismissibleRestaurantCardState extends State<DismissibleRestaurantCard> {
                     Fluttertoast.showToast(
                       msg:
                           'Unable to connect to the server. Please try again later.',
-                      backgroundColor: Colors.orange,
+                      backgroundColor: getWarningColor(context),
                     );
                     return false;
                   }
@@ -152,14 +153,14 @@ class _DismissibleRestaurantCardState extends State<DismissibleRestaurantCard> {
 
                 Fluttertoast.showToast(
                   msg: '${widget.restaurant.name} removed from favorites.',
-                  backgroundColor: Colors.green,
+                  backgroundColor: getSuccessColor(context),
                 );
               } else {
                 // If removal was not successful, show an error message
                 Fluttertoast.showToast(
                   msg:
                       'Unable to connect to the server. Please try again later.',
-                  backgroundColor: Colors.orange,
+                  backgroundColor: getWarningColor(context),
                 );
 
                 // Reset the widget to prevent red screen errors
@@ -168,7 +169,7 @@ class _DismissibleRestaurantCardState extends State<DismissibleRestaurantCard> {
             } catch (e) {
               Fluttertoast.showToast(
                 msg: 'Something went wrong. Please try again.',
-                backgroundColor: Colors.orange,
+                backgroundColor: getWarningColor(context),
               );
 
               // Reset the widget to prevent red screen errors
@@ -189,9 +190,10 @@ class _DismissibleRestaurantCardState extends State<DismissibleRestaurantCard> {
             child: Container(
               margin: const EdgeInsets.only(bottom: 16.0),
               color: Color.fromARGB(26, 0, 0, 0),
-              child: const Center(
+              child: Center(
                 child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                      Theme.of(context).colorScheme.error),
                 ),
               ),
             ),
@@ -300,7 +302,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 child: Icon(
                   connectivity.isOnline ? Icons.wifi : Icons.wifi_off,
-                  color: connectivity.isOnline ? Colors.green : Colors.red,
+                  color: connectivity.isOnline
+                      ? getSuccessColor(context)
+                      : Theme.of(context).colorScheme.error,
                 ),
               );
             },

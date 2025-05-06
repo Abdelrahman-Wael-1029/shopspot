@@ -10,6 +10,7 @@ import 'package:shopspot/models/product_model.dart';
 import 'package:shopspot/cubit/restaurant_cubit/restaurant_cubit.dart';
 import 'package:shopspot/services/database_service.dart';
 import 'package:shopspot/utils/app_routes.dart';
+import 'package:shopspot/utils/utils.dart';
 
 class ProductSearchCardSkeleton extends StatelessWidget {
   const ProductSearchCardSkeleton({super.key});
@@ -210,7 +211,6 @@ class _ProductSearchCardState extends State<ProductSearchCard> {
               widget.product.description,
               style: const TextStyle(
                 fontSize: 14,
-                color: Colors.black87,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -240,8 +240,8 @@ class _ProductSearchCardState extends State<ProductSearchCard> {
             restaurantCubit.productsError!,
             style: TextStyle(
                 color: restaurantCubit.productsError!.contains('server')
-                    ? Colors.orange
-                    : Colors.red),
+                    ? getWarningColor(context)
+                    : Theme.of(context).colorScheme.error),
           ),
         ),
       );
@@ -428,11 +428,11 @@ class _ProductSearchCardState extends State<ProductSearchCard> {
   Color _getStatusColor(String status) {
     switch (status.toLowerCase().replaceAll('_', ' ')) {
       case 'available':
-        return Colors.green;
+        return getSuccessColor(context);
       case 'coming soon':
-        return Colors.orange;
+        return getWarningColor(context);
       case 'out of stock':
-        return Colors.red;
+        return Theme.of(context).colorScheme.error;
       default:
         return Colors.grey;
     }

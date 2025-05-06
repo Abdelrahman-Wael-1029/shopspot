@@ -7,6 +7,7 @@ import 'package:shopspot/models/product_model.dart';
 import 'package:shopspot/services/api_service.dart';
 import 'package:shopspot/services/database_service.dart';
 import 'package:shopspot/services/connectivity_service/connectivity_service.dart';
+import 'package:shopspot/utils/utils.dart';
 
 class ProductCubit extends Cubit<ProductState> {
   List<Product> _allProducts = [];
@@ -79,7 +80,7 @@ class ProductCubit extends Cubit<ProductState> {
           if (context.mounted) {
             Fluttertoast.showToast(
               msg: 'Unable to connect to the server. Using cached data.',
-              backgroundColor: Colors.orange,
+              backgroundColor:getWarningColor(context),
             );
           }
         } else {

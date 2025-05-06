@@ -7,6 +7,7 @@ import 'package:shopspot/utils/app_routes.dart';
 import 'package:shopspot/models/restaurant_model.dart';
 import 'package:shopspot/cubit/favorite_cubit/favorite_cubit.dart';
 import 'package:shopspot/cubit/restaurant_cubit/restaurant_cubit.dart';
+import 'package:shopspot/utils/utils.dart';
 import 'package:shopspot/widgets/restaurant_location_widget.dart';
 
 class RestaurantDetailsScreen extends StatefulWidget {
@@ -32,7 +33,12 @@ class _RestaurantDetailsScreenState extends State<RestaurantDetailsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.restaurant.name),
+        title: Text(
+          widget.restaurant.name,
+          style: TextStyle(
+            fontSize: 20
+          )
+        ),
         actions: [
           // Favorite button
           _isLoading
@@ -51,7 +57,7 @@ class _RestaurantDetailsScreenState extends State<RestaurantDetailsScreen> {
               : IconButton(
                   icon: Icon(
                     isFavorite ? Icons.favorite : Icons.favorite_border,
-                    color: isFavorite ? Colors.red : null,
+                    color: isFavorite ?Theme.of(context).colorScheme.error : null,
                   ),
                   onPressed: () => _updateFavoriteStatus(isFavorite),
                 ),
@@ -142,14 +148,13 @@ class _RestaurantDetailsScreenState extends State<RestaurantDetailsScreen> {
 
   Future<void> _updateFavoriteStatus(isFavorite) async {
     // Check connectivity status first
-    final connectivityService =
-        context.read<ConnectivityService>();
+    final connectivityService = context.read<ConnectivityService>();
 
     if (!connectivityService.isOnline) {
       // Show toast message when offline
       Fluttertoast.showToast(
         msg: 'You are offline. Please check your connection.',
-        backgroundColor: Colors.red,
+        backgroundColor: Theme.of(context).colorScheme.error,
       );
       return;
     }
@@ -159,7 +164,7 @@ class _RestaurantDetailsScreenState extends State<RestaurantDetailsScreen> {
       // Show toast message when server is unavailable
       Fluttertoast.showToast(
         msg: 'Unable to connect to the server. Please try again later.',
-        backgroundColor: Colors.orange,
+        backgroundColor:getWarningColor(context),
       );
       return;
     }
@@ -169,11 +174,9 @@ class _RestaurantDetailsScreenState extends State<RestaurantDetailsScreen> {
 
     try {
       // Get the favorite cubit
-      final favoriteCubit =
-          context.read<FavoriteCubit>();
+      final favoriteCubit = context.read<FavoriteCubit>();
       // Get the restaurant cubit
-      final restaurantCubit =
-          context.read<RestaurantCubit>();
+      final restaurantCubit = context.read<RestaurantCubit>();
 
       // Call the appropriate method directly based on current state
       bool success = false;
@@ -193,14 +196,14 @@ class _RestaurantDetailsScreenState extends State<RestaurantDetailsScreen> {
         // Show toast message that there was a problem connecting to the server
         Fluttertoast.showToast(
           msg: 'Unable to connect to the server. Please try again later.',
-          backgroundColor: Colors.orange,
+          backgroundColor: getWarningColor(context),
         );
       }
     } catch (e) {
       // Show error message
       Fluttertoast.showToast(
         msg: 'Something went wrong. Please try again.',
-        backgroundColor: Colors.orange,
+        backgroundColor: getWarningColor(context),
       );
     } finally {
       // Always reset loading state if mounted

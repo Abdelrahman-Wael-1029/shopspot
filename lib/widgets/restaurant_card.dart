@@ -10,6 +10,7 @@ import 'package:shopspot/cubit/location_cubit/location_cubit.dart';
 import 'package:shopspot/services/connectivity_service/connectivity_service.dart';
 import 'package:shopspot/cubit/favorite_cubit/favorite_cubit.dart';
 import 'package:shopspot/cubit/restaurant_cubit/restaurant_cubit.dart';
+import 'package:shopspot/utils/utils.dart';
 
 class RestaurantCardSkeleton extends StatelessWidget {
   const RestaurantCardSkeleton({super.key});
@@ -184,7 +185,6 @@ class _RestaurantCardState extends State<RestaurantCard> {
                     widget.restaurant.description,
                     style: const TextStyle(
                       fontSize: 14,
-                      color: Colors.black87,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -262,20 +262,21 @@ class _FavoriteButtonState extends State<FavoriteButton> {
       width: 40,
       height: 40,
       child: _isLoading
-          ? const Center(
+          ? Center(
               child: SizedBox(
                 width: 24,
                 height: 24,
                 child: CircularProgressIndicator(
                   strokeWidth: 2.0,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                      Theme.of(context).colorScheme.error),
                 ),
               ),
             )
           : IconButton(
               icon: Icon(
                 isFavorite ? Icons.favorite : Icons.favorite_border,
-                color: isFavorite ? Colors.red : null,
+                color: isFavorite ? Theme.of(context).colorScheme.error : null,
               ),
               onPressed:
                   _isLoading ? null : () => _updateFavoriteStatus(isFavorite),
@@ -291,7 +292,7 @@ class _FavoriteButtonState extends State<FavoriteButton> {
       // Show toast message when offline
       Fluttertoast.showToast(
         msg: 'You are offline. Please check your connection.',
-        backgroundColor: Colors.red,
+        backgroundColor: Theme.of(context).colorScheme.error,
       );
       return;
     }
@@ -301,7 +302,7 @@ class _FavoriteButtonState extends State<FavoriteButton> {
       // Show toast message when server is unavailable
       Fluttertoast.showToast(
         msg: 'Unable to connect to the server. Please try again later.',
-        backgroundColor: Colors.orange,
+        backgroundColor: getWarningColor(context),
       );
       return;
     }
@@ -338,14 +339,14 @@ class _FavoriteButtonState extends State<FavoriteButton> {
         // Show toast message that there was a problem connecting to the server
         Fluttertoast.showToast(
           msg: 'Unable to connect to the server. Please try again later.',
-          backgroundColor: Colors.orange,
+          backgroundColor: getWarningColor(context),
         );
       }
     } catch (e) {
       // Show error message
       Fluttertoast.showToast(
         msg: 'Something went wrong. Please try again.',
-        backgroundColor: Colors.orange,
+        backgroundColor: getWarningColor(context),
       );
     } finally {
       // Reset loading state

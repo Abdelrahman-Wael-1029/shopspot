@@ -4,6 +4,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shopspot/cubit/auth_cubit/auth_state.dart';
 import 'package:shopspot/utils/app_routes.dart';
 import 'package:shopspot/cubit/auth_cubit/auth_cubit.dart';
+import 'package:shopspot/utils/utils.dart';
 import 'package:shopspot/widgets/custom_button.dart';
 import 'package:shopspot/widgets/custom_text_field.dart';
 
@@ -111,14 +112,15 @@ class _SignupScreenState extends State<SignupScreen> {
         msg: "Signup successful",
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
-        backgroundColor: Colors.green,
+        backgroundColor: getSuccessColor(context),
         textColor: Colors.white,
       );
 
       if (mounted) {
-        Navigator.pushReplacementNamed(
+        Navigator.pushNamedAndRemoveUntil(
           context,
-          AppRoutes.restaurants,
+          AppRoutes.home,
+          (routes) => false,
         );
       }
     } else {
@@ -173,7 +175,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
         Fluttertoast.showToast(
           msg: errorMessage,
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
         );
       }
     }
@@ -181,8 +183,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authCubit = context.read<AuthCubit>();
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Sign Up'),
@@ -297,11 +297,14 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: 20),
 
-              // Register button
-              CustomButton(
-                text: 'Sign Up',
-                onPressed: _register,
-                isLoading: authCubit.state is AuthLoading,
+              BlocBuilder<AuthCubit, AuthState>(
+                builder: (context, state) {
+                  return CustomButton(
+                    text: 'Sign Up',
+                    onPressed: _register,
+                    isLoading: state is AuthLoading,
+                  );
+                },
               ),
 
               const SizedBox(height: 20),
@@ -313,7 +316,11 @@ class _SignupScreenState extends State<SignupScreen> {
                   const Text("Already have an account? "),
                   TextButton(
                     onPressed: () {
-                      Navigator.pop(context);
+                      Navigator.pushNamedAndRemoveUntil(
+                        context,
+                        AppRoutes.login,
+                        (route) => false,
+                      );
                     },
                     child: const Text('Login'),
                   ),
@@ -330,6 +337,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
   Widget _buildGenderSelection() {
     return Card(
+      color: Colors.transparent,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10.0),

@@ -4,6 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shopspot/cubit/location_cubit/location_cubit.dart';
 import 'package:shopspot/utils/app_routes.dart';
+import 'package:shopspot/utils/utils.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shopspot/models/restaurant_model.dart';
@@ -24,137 +25,137 @@ class RestaurantsMapScreen extends StatefulWidget {
 
 class _RestaurantsMapScreenState extends State<RestaurantsMapScreen> {
   final MapController _mapController = MapController();
-  late List<Marker> _markers;
+  List<Marker>? _markers;
   bool _isRefreshing = false;
 
   @override
   void initState() {
     super.initState();
-    _createMarkers();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _createMarkers());
   }
 
   void _createMarkers() {
-    _markers = widget.restaurants.map((restaurant) {
-      // Pre-calculate distance if available
-      final locationCubit =
-          context.read<LocationCubit>();
-      final distance = locationCubit.getDistanceSync(restaurant);
-      final String distanceText =
-          distance != null ? locationCubit.formatDistance(distance) : '';
+    setState(() {
+      _markers = widget.restaurants.map((restaurant) {
+        // Pre-calculate distance if available
+        final locationCubit = context.read<LocationCubit>();
+        final distance = locationCubit.getDistanceSync(restaurant);
+        final String distanceText =
+            distance != null ? locationCubit.formatDistance(distance) : '';
 
-      return Marker(
-        point: LatLng(restaurant.latitude, restaurant.longitude),
-        width: 80,
-        height: 80,
-        child: GestureDetector(
-          onTap: () {
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: Text(restaurant.name),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(restaurant.location),
-                    if (distanceText.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.directions_walk,
-                                size: 16, color: Colors.blue),
-                            const SizedBox(width: 4),
-                            Text(
-                              distanceText,
-                              style: const TextStyle(
-                                color: Colors.blue,
-                                fontWeight: FontWeight.bold,
+        return Marker(
+          point: LatLng(restaurant.latitude, restaurant.longitude),
+          width: 80,
+          height: 80,
+          child: GestureDetector(
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: Text(restaurant.name),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(restaurant.location),
+                      if (distanceText.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.directions_walk,
+                                  size: 16, color: Colors.blue),
+                              const SizedBox(width: 4),
+                              Text(
+                                distanceText,
+                                style: const TextStyle(
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    child: const Text('Close'),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pushNamed(
-                        context,
-                        AppRoutes.restaurantDetails,
-                        arguments: {
-                          'restaurant': restaurant,
-                        },
-                      );
-                    },
-                    child: const Text('Details'),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      launchUrl(
-                        Uri.parse(
-                          'https://www.google.com/maps/dir/?api=1&destination=${restaurant.latitude},${restaurant.longitude}&travelmode=driving',
-                        ),
-                      );
-                    },
-                    child: const Text('Directions'),
-                  ),
-                ],
-              ),
-            );
-          },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.restaurant,
-                color: Colors.red,
-                size: 30,
-              ),
-              if (distanceText.isNotEmpty)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 2,
-                        offset: const Offset(0, 1),
-                      ),
                     ],
                   ),
-                  child: Text(
-                    distanceText,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue,
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      child: const Text('Close'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pushNamed(
+                          context,
+                          AppRoutes.restaurantDetails,
+                          arguments: {
+                            'restaurant': restaurant,
+                          },
+                        );
+                      },
+                      child: const Text('Details'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        launchUrl(
+                          Uri.parse(
+                            'https://www.google.com/maps/dir/?api=1&destination=${restaurant.latitude},${restaurant.longitude}&travelmode=driving',
+                          ),
+                        );
+                      },
+                      child: const Text('Directions'),
+                    ),
+                  ],
+                ),
+              );
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.restaurant,
+                  color: Theme.of(context).colorScheme.error,
+                  size: 30,
+                ),
+                if (distanceText.isNotEmpty)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 2,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      distanceText,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue,
+                      ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
-        ),
-      );
-    }).toList();
+        );
+      }).toList();
+    });
   }
 
   void _fitBounds({bool includeUserLocation = true}) {
     if (widget.restaurants.isEmpty) return;
 
-    final locationCubit =
-        context.read<LocationCubit>();
+    final locationCubit = context.read<LocationCubit>();
     final hasLocation =
         locationCubit.currentLocation != null && includeUserLocation;
 
@@ -200,8 +201,7 @@ class _RestaurantsMapScreenState extends State<RestaurantsMapScreen> {
     });
 
     try {
-      final locationCubit =
-          context.read<LocationCubit>();
+      final locationCubit = context.read<LocationCubit>();
 
       // Check permission first
       final hasPermission =
@@ -209,7 +209,7 @@ class _RestaurantsMapScreenState extends State<RestaurantsMapScreen> {
       if (!hasPermission) {
         Fluttertoast.showToast(
           msg: 'Location permission denied. Please enable in settings.',
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
         );
         return;
       }
@@ -224,13 +224,13 @@ class _RestaurantsMapScreenState extends State<RestaurantsMapScreen> {
 
       Fluttertoast.showToast(
         msg: 'Location updated',
-        backgroundColor: Colors.green,
+        backgroundColor: getSuccessColor(context),
       );
     } catch (e) {
       debugPrint('Error refreshing location: $e');
       Fluttertoast.showToast(
         msg: 'Failed to update location',
-        backgroundColor: Colors.red,
+        backgroundColor: Theme.of(context).colorScheme.error,
       );
     } finally {
       if (mounted) {
@@ -258,7 +258,12 @@ class _RestaurantsMapScreenState extends State<RestaurantsMapScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Restaurants for ${widget.productName}'),
+        title: Text(
+          'Restaurants for ${widget.productName}',
+          style:  TextStyle(
+            fontSize: 18
+          ),
+        ),
         actions: [
           _isRefreshing
               ? const Padding(
@@ -300,7 +305,7 @@ class _RestaurantsMapScreenState extends State<RestaurantsMapScreen> {
             subdomains: const ['a', 'b', 'c'],
             userAgentPackageName: 'com.example.shopspot',
           ),
-          MarkerLayer(markers: _markers),
+          if (_markers != null) MarkerLayer(markers: _markers!),
           // Current Location Marker
           if (locationCubit.currentLocation != null)
             MarkerLayer(

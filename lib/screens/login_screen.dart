@@ -4,6 +4,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shopspot/cubit/auth_cubit/auth_state.dart';
 import 'package:shopspot/utils/app_routes.dart';
 import 'package:shopspot/cubit/auth_cubit/auth_cubit.dart';
+import 'package:shopspot/utils/utils.dart';
 import 'package:shopspot/widgets/custom_button.dart';
 import 'package:shopspot/widgets/custom_text_field.dart';
 
@@ -66,31 +67,31 @@ class _LoginScreenState extends State<LoginScreen> {
       _emailController.text,
       _passwordController.text,
     );
-
     if (success) {
       Fluttertoast.showToast(
         msg: "Login successful",
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
-        backgroundColor: Colors.green,
+        backgroundColor: getSuccessColor(context),
         textColor: Colors.white,
       );
 
       if (mounted) {
-        Navigator.pushReplacementNamed(
+        Navigator.pushNamedAndRemoveUntil(
           context,
-          AppRoutes.restaurants,
+          AppRoutes.home,
+          (routes) => false,
         );
       }
     } else {
       if (mounted) {
         Fluttertoast.showToast(
-          msg: authCubit.state is AuthError
+          msg: (authCubit.state is AuthError)
               ? (authCubit.state as AuthError).message
-              : "Login failed",
+              : "Login failedddd",
           toastLength: Toast.LENGTH_LONG,
           gravity: ToastGravity.BOTTOM,
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
           textColor: Colors.white,
         );
       }
@@ -99,8 +100,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authCubit = context.read<AuthCubit>();
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Login'),
@@ -175,11 +174,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 20),
 
-              // Login button
-              CustomButton(
-                text: 'Login',
-                onPressed: _login,
-                isLoading: authCubit.state is AuthLoading,
+              BlocBuilder<AuthCubit, AuthState>(
+                builder: (context, state) {
+                  return CustomButton(
+                    text: 'Login',
+                    onPressed: _login,
+                    isLoading: state is AuthLoading,
+                  );
+                },
               ),
 
               const SizedBox(height: 20),
@@ -198,9 +200,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         _passwordError = null;
                         _showPassword = false;
                       });
-                      Navigator.pushNamed(
+                      Navigator.pushNamedAndRemoveUntil(
                         context,
                         AppRoutes.register,
+                        (route) => false,
                       );
                     },
                     child: const Text('Sign Up'),

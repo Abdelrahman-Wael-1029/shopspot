@@ -8,6 +8,7 @@ import 'package:shopspot/cubit/product_cubit/product_cubit.dart';
 import 'package:shopspot/services/connectivity_service/connectivity_service.dart';
 import 'package:shopspot/services/connectivity_service/connectivity_state.dart';
 import 'package:shopspot/services/database_service.dart';
+import 'package:shopspot/utils/utils.dart';
 import 'package:shopspot/widgets/custom_search.dart';
 import 'package:shopspot/widgets/product_card.dart';
 
@@ -73,7 +74,9 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 child: Icon(
                   connectivity.isOnline ? Icons.wifi : Icons.wifi_off,
-                  color: connectivity.isOnline ? Colors.green : Colors.red,
+                  color: connectivity.isOnline
+                      ? getSuccessColor(context)
+                      : Theme.of(context).colorScheme.error,
                 ),
               );
             },

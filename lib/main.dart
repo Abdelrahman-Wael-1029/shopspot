@@ -10,6 +10,7 @@ import 'package:shopspot/cubit/location_cubit/location_cubit.dart';
 import 'package:shopspot/cubit/product_cubit/product_cubit.dart';
 import 'package:shopspot/services/database_service.dart';
 import 'package:shopspot/services/connectivity_service/connectivity_service.dart';
+import 'package:shopspot/utils/app_theme.dart';
 
 void main() async {
   // Ensure Flutter is initialized - this is important!
@@ -45,13 +46,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'ShopSpot',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-      ),
-      // theme: AppTheme.lightTheme,
-      // darkTheme: AppTheme.darkTheme,
-      // themeMode: ThemeMode.system,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.system,
       onGenerateRoute: AppRoutes.generateRoute,
     );
   }

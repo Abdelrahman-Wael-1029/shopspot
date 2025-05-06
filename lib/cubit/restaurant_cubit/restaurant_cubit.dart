@@ -8,6 +8,7 @@ import 'package:shopspot/services/connectivity_service/connectivity_service.dart
 import 'package:shopspot/services/database_service.dart';
 import 'package:shopspot/cubit/location_cubit/location_cubit.dart';
 import 'package:shopspot/cubit/product_cubit/product_cubit.dart';
+import 'package:shopspot/utils/utils.dart';
 
 import 'restaurant_state.dart';
 
@@ -70,7 +71,7 @@ class RestaurantCubit extends Cubit<RestaurantState> {
           if (context.mounted) {
             Fluttertoast.showToast(
               msg: 'Unable to connect to the server. Using cached data.',
-              backgroundColor: Colors.orange,
+              backgroundColor: getWarningColor(context),
             );
           }
         } else {
@@ -213,7 +214,7 @@ class RestaurantCubit extends Cubit<RestaurantState> {
       // Show toast or alert that we're offline
       Fluttertoast.showToast(
         msg: 'You are offline. Please check your connection.',
-        backgroundColor: Colors.red,
+        backgroundColor: Theme.of(context).colorScheme.error,
       );
     }
   }

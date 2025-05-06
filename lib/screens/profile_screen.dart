@@ -8,6 +8,7 @@ import 'package:shopspot/utils/app_routes.dart';
 import 'package:shopspot/models/user_model.dart';
 import 'package:shopspot/cubit/auth_cubit/auth_cubit.dart';
 import 'package:shopspot/services/connectivity_service/connectivity_service.dart';
+import 'package:shopspot/utils/utils.dart';
 import 'package:shopspot/widgets/custom_button.dart';
 import 'package:shopspot/widgets/custom_text_field.dart';
 
@@ -78,7 +79,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // Show toast if we're offline
       Fluttertoast.showToast(
         msg: "You are offline. Showing cached profile data.",
-        backgroundColor: Colors.red,
+        backgroundColor: Theme.of(context).colorScheme.error,
       );
     }
   }
@@ -106,7 +107,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       Fluttertoast.showToast(
         msg: "Unable to access camera or gallery. Please try again.",
-        backgroundColor: Colors.red,
+        backgroundColor: Theme.of(context).colorScheme.error,
       );
     }
   }
@@ -225,7 +226,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (success) {
       Fluttertoast.showToast(
         msg: "Profile updated successfully",
-        backgroundColor: Colors.green,
+        backgroundColor: getSuccessColor(context),
       );
 
       setState(() {
@@ -238,7 +239,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         msg: authCubit.state is AuthError
             ? (authCubit.state as AuthError).message
             : "Something went wrong. Please try again.",
-        backgroundColor: Colors.orange,
+        backgroundColor: getWarningColor(context),
       );
     }
   }
@@ -248,9 +249,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await authCubit.logout(context);
 
     if (mounted) {
-      Navigator.pushReplacementNamed(
+      Navigator.pushNamedAndRemoveUntil(
         context,
         AppRoutes.login,
+        (route) => false,
       );
     }
   }
@@ -273,7 +275,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Navigator.pop(context);
               _logout();
             },
-            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+            child: Text('Logout',
+                style: TextStyle(color: Theme.of(context).colorScheme.error)),
           ),
         ],
       ),
@@ -330,13 +333,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               }
             },
             itemBuilder: (BuildContext context) => [
-              const PopupMenuItem<String>(
+              PopupMenuItem<String>(
                 value: 'logout',
                 child: Row(
                   children: [
-                    Icon(Icons.logout, color: Colors.red),
+                    Icon(Icons.logout,
+                        color: Theme.of(context).colorScheme.error),
                     SizedBox(width: 8),
-                    Text('Logout', style: TextStyle(color: Colors.red)),
+                    Text('Logout',
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.error)),
                   ],
                 ),
               ),
@@ -538,6 +544,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           text: 'Update Profile',
           onPressed: _updateProfile,
           isLoading: context.read<AuthCubit>().state is AuthLoading,
+          backgroundColor: Theme.of(context).primaryColor,
         ),
       ],
     );
@@ -545,6 +552,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildGenderSelection() {
     return Card(
+      color: Colors.transparent,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10.0),

@@ -9,6 +9,7 @@ import 'package:shopspot/models/user_model.dart';
 import 'package:shopspot/services/api_service.dart';
 import 'package:shopspot/services/database_service.dart';
 import 'package:shopspot/services/connectivity_service/connectivity_service.dart';
+import 'package:shopspot/utils/utils.dart';
 
 class AuthCubit extends Cubit<AuthState> {
   User? _user;
@@ -169,7 +170,7 @@ class AuthCubit extends Cubit<AuthState> {
           if (context.mounted) {
             Fluttertoast.showToast(
               msg: 'Unable to connect to the server. Using cached data.',
-              backgroundColor: Colors.orange,
+              backgroundColor: getWarningColor(context),
             );
           }
         } else {
@@ -196,7 +197,8 @@ class AuthCubit extends Cubit<AuthState> {
       // Check internet connection before attempting update
       final hasInternet = await ApiService.isApiAccessible();
       if (!hasInternet) {
-        emit(AuthError('Unable to connect to the server. Please try again later.'));
+        emit(AuthError(
+            'Unable to connect to the server. Please try again later.'));
         return false;
       }
 
@@ -217,7 +219,8 @@ class AuthCubit extends Cubit<AuthState> {
         emit(AuthError(result['message']));
       }
     } catch (e) {
-      emit(AuthError('Unable to connect to the server. Please try again later.'));
+      emit(AuthError(
+          'Unable to connect to the server. Please try again later.'));
     }
 
     return success;

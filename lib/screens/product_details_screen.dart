@@ -4,6 +4,7 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:shopspot/models/product_model.dart';
 import 'package:shopspot/models/restaurant_model.dart';
 import 'package:shopspot/services/database_service.dart';
+import 'package:shopspot/utils/utils.dart';
 
 class ProductDetailsScreen extends StatelessWidget {
   final Product product;
@@ -27,9 +28,9 @@ class ProductDetailsScreen extends StatelessWidget {
 
     // Status indicator colors
     final Map<String, Color> statusColors = {
-      'available': Colors.green,
-      'out_of_stock': Colors.red,
-      'coming_soon': Colors.orange,
+      'available':getSuccessColor(context),
+      'out_of_stock': Theme.of(context).colorScheme.error,
+      'coming_soon': getWarningColor(context),
     };
 
     // Format status for display
@@ -159,9 +160,9 @@ class ProductDetailsScreen extends StatelessWidget {
                           // Restaurant section
                           Row(
                             children: [
-                              const Icon(
+                               Icon(
                                 Icons.restaurant,
-                                color: Colors.orange,
+                                color:getWarningColor(context),
                               ),
                               const SizedBox(width: 8),
                               Text(

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shopspot/cubit/restaurant_cubit/restaurant_cubit.dart';
+import 'package:shopspot/utils/utils.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shopspot/models/restaurant_model.dart';
@@ -71,9 +72,9 @@ class _RestaurantLocationWidgetState extends State<RestaurantLocationWidget> {
                               widget.restaurant.longitude),
                           width: 40,
                           height: 40,
-                          child: const Icon(
+                          child: Icon(
                             Icons.restaurant,
-                            color: Colors.red,
+                            color: Theme.of(context).colorScheme.error,
                             size: 30,
                           ),
                         ),
@@ -191,25 +192,21 @@ class _RestaurantLocationWidgetState extends State<RestaurantLocationWidget> {
     final bounds = LatLngBounds(
       LatLng(
         // Find the minimum of the two latitudes and add some padding
-        (locationCubit.currentLocation!.latitude <
-                widget.restaurant.latitude)
+        (locationCubit.currentLocation!.latitude < widget.restaurant.latitude)
             ? locationCubit.currentLocation!.latitude - 0.01
             : widget.restaurant.latitude - 0.01,
         // Find the minimum of the two longitudes and add some padding
-        (locationCubit.currentLocation!.longitude <
-                widget.restaurant.longitude)
+        (locationCubit.currentLocation!.longitude < widget.restaurant.longitude)
             ? locationCubit.currentLocation!.longitude - 0.01
             : widget.restaurant.longitude - 0.01,
       ),
       LatLng(
         // Find the maximum of the two latitudes and add some padding
-        (locationCubit.currentLocation!.latitude >
-                widget.restaurant.latitude)
+        (locationCubit.currentLocation!.latitude > widget.restaurant.latitude)
             ? locationCubit.currentLocation!.latitude + 0.01
             : widget.restaurant.latitude + 0.01,
         // Find the maximum of the two longitudes and add some padding
-        (locationCubit.currentLocation!.longitude >
-                widget.restaurant.longitude)
+        (locationCubit.currentLocation!.longitude > widget.restaurant.longitude)
             ? locationCubit.currentLocation!.longitude + 0.01
             : widget.restaurant.longitude + 0.01,
       ),
@@ -239,7 +236,7 @@ class _RestaurantLocationWidgetState extends State<RestaurantLocationWidget> {
       if (!hasPermission) {
         Fluttertoast.showToast(
           msg: 'Location permission denied. Please enable in settings.',
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
         );
         return;
       }
@@ -257,12 +254,12 @@ class _RestaurantLocationWidgetState extends State<RestaurantLocationWidget> {
 
       Fluttertoast.showToast(
         msg: 'Location updated',
-        backgroundColor: Colors.green,
+        backgroundColor: getSuccessColor(context),
       );
     } catch (e) {
       Fluttertoast.showToast(
         msg: 'Failed to update location',
-        backgroundColor: Colors.red,
+        backgroundColor: Theme.of(context).colorScheme.error,
       );
     } finally {
       if (mounted) {
