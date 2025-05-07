@@ -11,10 +11,11 @@ class LocationCubit extends Cubit<LocationState> {
 
   Position? get currentLocation => _currentLocation;
 
-  Future<bool> checkLocationPermission({getPosition = true}) async {
+  Future<bool> checkLocationPermission({request = true}) async {
     try {
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
+        if (!request) return false;
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
           // Permissions are denied
@@ -26,9 +27,7 @@ class LocationCubit extends Cubit<LocationState> {
       }
 
       // Check if location services are enabled
-      if (!getPosition) {
-        return Geolocator.isLocationServiceEnabled();
-      }
+      if (!request) return Geolocator.isLocationServiceEnabled();
 
       _currentLocation = await Geolocator.getCurrentPosition();
       return _currentLocation != null;
@@ -41,7 +40,7 @@ class LocationCubit extends Cubit<LocationState> {
   // Refresh current location
   Future<void> refreshLocation() async {
     try {
-      if (!await checkLocationPermission(getPosition: false)) {
+      if (!await checkLocationPermission(request: false)) {
         return;
       }
 
