@@ -93,17 +93,10 @@ class RestaurantCubit extends Cubit<RestaurantState> {
   Future<void> refreshData(BuildContext context) async {
     final connectivityService = context.read<ConnectivityService>();
 
-    emit(RestaurantLoading());
-
     // Only try to refresh from server if we're online
     if (connectivityService.isOnline) {
       await refreshRestaurants(context);
     } else {
-      emit(RestaurantError('You are offline. Please check your connection.'));
-
-      // Check if still mounted before accessing context
-      if (!context.mounted) return;
-
       // Show toast or alert that we're offline
       Fluttertoast.showToast(
         msg: 'You are offline. Please check your connection.',
