@@ -208,7 +208,7 @@ class _RestaurantsMapScreenState extends State<RestaurantsMapScreen> {
 
       // Check permission first
       final hasPermission =
-          await LocationCubit.checkLocationPermission(request: true);
+          await locationCubit.checkLocationPermission();
       if (!hasPermission) {
         if (mounted) {
           Fluttertoast.showToast(

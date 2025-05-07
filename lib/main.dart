@@ -79,11 +79,11 @@ class _InitScreenState extends State<InitScreen> {
     final authCubit = context.read<AuthCubit>();
     final isAuthenticated = authCubit.checkCachedAuthentication();
 
+    // Request location permission
+    await context.read<LocationCubit>().checkLocationPermission();
+
     // Wait a brief moment to ensure proper initialization
     await Future.delayed(const Duration(milliseconds: 500));
-
-    // Request location permission
-    await LocationCubit.checkLocationPermission(request: true);
 
     // Remove splash screen
     FlutterNativeSplash.remove();

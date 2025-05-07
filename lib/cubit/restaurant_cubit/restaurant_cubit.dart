@@ -57,9 +57,8 @@ class RestaurantCubit extends Cubit<RestaurantState> {
     } finally {
       if (!serverIsAvailable || (serverIsAvailable && !result['success'])) {
         if (hasCachedData) {
-          if (context.mounted) refreshRestaurantsDistances(context);
-          emit(RestaurantLoaded());
           _restaurants = cachedRestaurants;
+          emit(RestaurantLoaded());
 
           if (context.mounted) {
             Fluttertoast.showToast(

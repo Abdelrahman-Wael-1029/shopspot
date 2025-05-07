@@ -33,7 +33,10 @@ class _RestaurantLocationWidgetState extends State<RestaurantLocationWidget> {
     return BlocConsumer<LocationCubit, LocationState>(
       listenWhen: (previous, current) {
         // Just check if the state indicates location was updated
-        return current is LocationLoaded && (previous is LocationLoading || previous is LocationError || previous is LocationInitial);
+        return current is LocationLoaded &&
+            (previous is LocationLoading ||
+                previous is LocationError ||
+                previous is LocationInitial);
       },
       listener: (context, state) {
         // Location has changed, update the map
@@ -248,7 +251,7 @@ class _RestaurantLocationWidgetState extends State<RestaurantLocationWidget> {
     try {
       // Check permission first
       final hasPermission =
-          await LocationCubit.checkLocationPermission(request: true);
+          await context.read<LocationCubit>().checkLocationPermission();
       if (!hasPermission) {
         if (mounted) {
           Fluttertoast.showToast(

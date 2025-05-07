@@ -3,7 +3,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:shopspot/cubit/location_cubit/location_state.dart';
 import 'package:shopspot/models/restaurant_model.dart';
 
-
 class LocationCubit extends Cubit<LocationState> {
   Position? _currentLocation;
   final Map<int, double?> _restaurantDistances = {};
@@ -12,18 +11,13 @@ class LocationCubit extends Cubit<LocationState> {
 
   Position? get currentLocation => _currentLocation;
 
-  static Future<bool> checkLocationPermission({bool request = false}) async {
+  Future<bool> checkLocationPermission({getPosition = true}) async {
     try {
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
-        if (request) {
-          permission = await Geolocator.requestPermission();
-          if (permission == LocationPermission.denied) {
-            // Permissions are denied
-            return false;
-          }
-        } else {
-          // Permissions are denied and not asked
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          // Permissions are denied
           return false;
         }
       } else if (permission == LocationPermission.deniedForever) {
@@ -32,7 +26,12 @@ class LocationCubit extends Cubit<LocationState> {
       }
 
       // Check if location services are enabled
-      return await Geolocator.isLocationServiceEnabled();
+      if (!getPosition) {
+        return Geolocator.isLocationServiceEnabled();
+      }
+
+      _currentLocation = await Geolocator.getCurrentPosition();
+      return _currentLocation != null;
     } catch (e) {
       // Handle any exceptions that may occur during permission check
       return false;
@@ -42,8 +41,7 @@ class LocationCubit extends Cubit<LocationState> {
   // Refresh current location
   Future<void> refreshLocation() async {
     try {
-      final hasPermission = await checkLocationPermission();
-      if (!hasPermission) {
+      if (!await checkLocationPermission(getPosition: false)) {
         return;
       }
 
@@ -87,7 +85,7 @@ class LocationCubit extends Cubit<LocationState> {
   // Get distance from server (more accurate with road and terrain)
   Future<double?> getDistance(Restaurant restaurant) async {
     emit(LocationLoading());
-    
+
     try {
       await refreshLocation();
     } catch (e) {

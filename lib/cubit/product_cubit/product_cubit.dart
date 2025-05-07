@@ -19,27 +19,28 @@ class ProductCubit extends Cubit<ProductState> {
 
   // Fetch products with context awareness
   Future<void> fetchData(BuildContext context) async {
-    final RestaurantCubit restaurantCubit = context.read<RestaurantCubit>();
+    final restaurantCubit = context.read<RestaurantCubit>();
+    final connectivityService = context.read<ConnectivityService>();
     emit(ProductLoading());
 
-    if (restaurantCubit.state is RestaurantLoading) {
+    if (restaurantCubit.state is RestaurantLoading ||
+        restaurantCubit.state is RestaurantInitial) {
       late StreamSubscription subscription;
 
       subscription = restaurantCubit.stream.listen((restaurantState) {
-        if (restaurantState is RestaurantLoaded && state is ProductLoading &&context.mounted) {
-          _loadProducts(context);
+        if ((restaurantState is RestaurantLoaded ||
+                restaurantState is RestaurantError) &&
+            state is ProductLoading) {
+          _loadProducts(connectivityService);
           subscription.cancel();
         }
       });
     } else if (restaurantCubit.state is RestaurantLoaded) {
-      _loadProducts(context);
+      _loadProducts(connectivityService);
     }
   }
 
-  Future<void> _loadProducts(BuildContext context) async {
-    // Extract connectivity service
-    final connectivityService = context.read<ConnectivityService>();
-
+  Future<void> _loadProducts(ConnectivityService connectivityService) async {
     // Always check cached restaurants availability first
     List<Product> cachedProducts = DatabaseService.getAllProducts();
     final hasCachedData = cachedProducts.isNotEmpty;

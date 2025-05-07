@@ -26,7 +26,9 @@ class FavoriteCubit extends Cubit<FavoriteState> {
       late StreamSubscription subscription;
 
       subscription = restaurantCubit.stream.listen((restaurantState) {
-        if (restaurantState is RestaurantLoaded && state is FavoriteLoading) {
+        if ((restaurantState is RestaurantLoaded ||
+                restaurantState is RestaurantError) &&
+            state is FavoriteLoading) {
           _loadFavoritesFromDatabase();
           subscription.cancel();
         }

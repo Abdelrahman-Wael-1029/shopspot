@@ -46,7 +46,7 @@ class ProductSearchCardSkeleton extends StatelessWidget {
                     // Title placeholder
                     Container(
                       height: 16,
-                      width: MediaQuery.of(context).size.width * 0.45,
+                      width: MediaQuery.of(context).size.width * 0.48,
                       decoration: BoxDecoration(
                         color: Colors.grey[300],
                         borderRadius: BorderRadius.circular(8),
