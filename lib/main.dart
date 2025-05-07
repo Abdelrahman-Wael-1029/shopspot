@@ -82,9 +82,6 @@ class _InitScreenState extends State<InitScreen> {
     // Request location permission
     await context.read<LocationCubit>().checkLocationPermission();
 
-    // Wait a brief moment to ensure proper initialization
-    await Future.delayed(const Duration(milliseconds: 500));
-
     // Remove splash screen
     FlutterNativeSplash.remove();
 

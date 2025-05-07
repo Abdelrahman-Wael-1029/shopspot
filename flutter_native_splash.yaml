@@ -1,5 +1,6 @@
 flutter_native_splash:
-  color: "#2196F3"
+  color: "#3F51B5"
+  color_dark: "#303F9F"
   image: assets/SplashLogo.png
   branding: assets/SplashBrand.png
 
@@ -8,7 +9,8 @@ flutter_native_splash:
   android_gravity: center
   branding_mode: bottom
   android_12:
-    color: "#2196F3"
+    color: "#3F51B5"
+    color_dark: "#303F9F"
     image: assets/SplashLogo.png
     branding: assets/SplashBrand.png
     android_gravity: center
