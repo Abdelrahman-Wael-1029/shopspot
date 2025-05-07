@@ -304,9 +304,6 @@ class ApiService {
       client.close();
       _removeClient(requestId);
     }
-
-    // Delete local data regardless of server response
-    await DatabaseService.deleteCurrentUser();
   }
 
   // Get user profile
@@ -593,58 +590,6 @@ class ApiService {
       final response = await client
           .get(
             Uri.parse('$baseUrl/products'),
-            headers: await _getHeaders(authorized: true),
-          )
-          .timeout(const Duration(seconds: 2));
-
-      final responseData = jsonDecode(response.body);
-
-      // Cleanup the client
-      client.close();
-      _removeClient(requestId);
-
-      if (response.statusCode == 200) {
-        return {
-          'success': true,
-          'products': responseData['data'],
-        };
-      } else {
-        return {
-          'success': false,
-          'message': responseData['message'],
-        };
-      }
-    } on TimeoutException {
-      timeoutHandling();
-
-      return {
-        'success': false,
-        'message': 'Connection timed out. Please try again later.',
-      };
-    } catch (e) {
-      // Cleanup the client
-      client.close();
-      _removeClient(requestId);
-
-      return {
-        'success': false,
-        'message': 'Network connection issue. Please try again later.',
-      };
-    }
-  }
-
-  static Future<Map<String, dynamic>> getProductsByRestaurantId(
-      int? restaurantId) async {
-    if (restaurantId == null) return getProducts();
-    // Generate a unique ID for this request
-    final requestId =
-        'products-$restaurantId-${DateTime.now().millisecondsSinceEpoch}';
-    final client = _getClient(requestId);
-
-    try {
-      final response = await client
-          .get(
-            Uri.parse('$baseUrl/restaurants/$restaurantId/products'),
             headers: await _getHeaders(authorized: true),
           )
           .timeout(const Duration(seconds: 2));

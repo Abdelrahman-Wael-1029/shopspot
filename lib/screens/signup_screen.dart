@@ -119,7 +119,7 @@ class _SignupScreenState extends State<SignupScreen> {
       Navigator.pushNamedAndRemoveUntil(
         context,
         AppRoutes.home,
-        (routes) => false,
+        (_) => false,
       );
     } else if (mounted) {
       // Get validation errors from the response
@@ -313,11 +313,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   const Text("Already have an account? "),
                   TextButton(
                     onPressed: () {
-                      Navigator.pushNamedAndRemoveUntil(
-                        context,
-                        AppRoutes.login,
-                        (route) => false,
-                      );
+                      Navigator.pop(context);
                     },
                     child: const Text('Login'),
                   ),

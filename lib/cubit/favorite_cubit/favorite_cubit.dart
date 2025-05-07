@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shopspot/cubit/favorite_cubit/favorite_state.dart';
@@ -12,12 +11,10 @@ import 'package:shopspot/services/connectivity_service/connectivity_service.dart
 
 class FavoriteCubit extends Cubit<FavoriteState> {
   List<Restaurant> _favorites = [];
-  bool _hasBeenInitialized = false; // Track if we've loaded favorites before
 
   FavoriteCubit() : super(FavoriteInitial());
 
   List<Restaurant> get favorites => _favorites;
-  bool get hasBeenInitialized => _hasBeenInitialized;
 
   // Initialize cubit and load favorites
   Future<void> initialize(BuildContext context) async {
@@ -42,14 +39,12 @@ class FavoriteCubit extends Cubit<FavoriteState> {
   // Helper method to load favorites from database
   void _loadFavoritesFromDatabase() {
     _favorites = DatabaseService.getFavoriteRestaurants();
-    _hasBeenInitialized = true;
     emit(FavoriteLoaded());
   }
 
   // Clear all favorites (call this on logout)
   Future<void> clearAllFavorites() async {
     _favorites = [];
-    _hasBeenInitialized = false;
     await DatabaseService.clearAllFavorites();
     emit(FavoriteInitial());
   }

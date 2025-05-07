@@ -8,7 +8,7 @@ class IndexCubit extends Cubit<IndexState> {
 
   IndexCubit() : super(IndexInitial());
 
-  void changeIndex(int index) {
+  void setIndex(int index) {
     _currentIndex = index;
     emit(IndexLoaded());
   }

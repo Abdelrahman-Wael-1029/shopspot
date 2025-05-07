@@ -25,7 +25,7 @@ class HomeScreen extends StatelessWidget {
           ),
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: indexCubit.currentIndex,
-            onTap: (index) => indexCubit.changeIndex(index),
+            onTap: (index) => indexCubit.setIndex(index),
             items: const [
               BottomNavigationBarItem(
                 icon: Icon(Icons.restaurant),

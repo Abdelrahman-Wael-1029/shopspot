@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shopspot/cubit/auth_cubit/auth_state.dart';
+import 'package:shopspot/cubit/index_cubit/index_cubit.dart';
 import 'package:shopspot/utils/app_routes.dart';
 import 'package:shopspot/models/user_model.dart';
 import 'package:shopspot/cubit/auth_cubit/auth_cubit.dart';
@@ -254,6 +255,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _logout() async {
     final authCubit = context.read<AuthCubit>();
+    context.read<IndexCubit>().setIndex(0);
     await authCubit.logout(context);
 
     if (mounted) {

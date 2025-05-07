@@ -48,15 +48,20 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
 
   Future<void> _loadProducts() async {
     final productCubit = context.read<ProductCubit>();
-    final products =
-        await productCubit.fetchData(context, widget.restaurant.id);
-
-    if (mounted) {
-      setState(() {
-        _products = products;
-        _restaurantProducts =
-            DatabaseService.getRelationsByRestaurantId(widget.restaurant.id);
-      });
+    if (productCubit.state is ProductLoading) {
+      return; // Prevent multiple loading states
+    } else if (productCubit.state is ProductInitial ||
+        productCubit.state is ProductError) {
+      await productCubit.fetchData(context);
+    } else if (productCubit.state is ProductLoaded) {
+      if (mounted) {
+        setState(() {
+          _restaurantProducts =
+              DatabaseService.getRelationsByRestaurantId(widget.restaurant.id);
+          _products =
+              DatabaseService.getProductsByRelations(_restaurantProducts);
+        });
+      }
     }
   }
 
@@ -182,28 +187,24 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                   );
                 }
 
-                return RefreshIndicator(
-                  onRefresh: _loadProducts,
-                  child: GridView.builder(
-                    padding: const EdgeInsets.all(16),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.8,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                    ),
-                    itemCount: products.length,
-                    itemBuilder: (context, index) {
-                      final product = products[index];
-                      return ProductCard(
-                        key: ValueKey('product_${product.id}'),
-                        product: product,
-                        restaurant: widget.restaurant,
-                        restaurantProducts: _restaurantProducts,
-                      );
-                    },
+                return GridView.builder(
+                  padding: const EdgeInsets.all(16),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.8,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
                   ),
+                  itemCount: products.length,
+                  itemBuilder: (context, index) {
+                    final product = products[index];
+                    return ProductCard(
+                      key: ValueKey('product_${product.id}'),
+                      product: product,
+                      restaurant: widget.restaurant,
+                      restaurantProducts: _restaurantProducts,
+                    );
+                  },
                 );
               },
             ),

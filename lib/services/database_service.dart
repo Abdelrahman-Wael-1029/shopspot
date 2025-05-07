@@ -166,19 +166,12 @@ class DatabaseService {
   }
 
   /// Get restaurants by product ID
-  static List<Restaurant> getRestaurantsByProductId(int productId) {
-    return getRelationsByProductId(productId)
+  static List<Restaurant> getRestaurantsByRelations(
+      List<RestaurantProduct> relations) {
+    return relations
         .map((relation) => getRestaurant(relation.restaurantId))
         .whereType<Restaurant>()
         .toList();
-  }
-
-  /// Get relations by restaurant ID
-  static List<RestaurantProduct> getRelationsByRestaurantId(int restaurantId) {
-    return _restaurantProductsBox?.values
-            .where((relation) => relation.restaurantId == restaurantId)
-            .toList() ??
-        [];
   }
 
   // Product methods
@@ -202,11 +195,32 @@ class DatabaseService {
   }
 
   /// Get products by restaurant ID
-  static List<Product> getProductsByRestaurantId(int restaurantId) {
-    return getRelationsByRestaurantId(restaurantId)
+  static List<Product> getProductsByRelations(
+      List<RestaurantProduct> relations) {
+    return relations
         .map((relation) => getProduct(relation.productId))
         .whereType<Product>()
         .toList();
+  }
+
+
+  // Relation methods
+
+  /// Save restaurant's products to local database
+  static Future<void> saveRelations(
+      List<RestaurantProduct> relations) async {
+    final Map<String, RestaurantProduct> entries = {
+      for (var relation in relations) relation.uniqueKey: relation
+    };
+    await _restaurantProductsBox?.putAll(entries);
+  }
+
+  /// Get relations by restaurant ID
+  static List<RestaurantProduct> getRelationsByRestaurantId(int restaurantId) {
+    return _restaurantProductsBox?.values
+            .where((relation) => relation.restaurantId == restaurantId)
+            .toList() ??
+        [];
   }
 
   /// Get relations by product ID
@@ -215,15 +229,6 @@ class DatabaseService {
             .where((relation) => relation.productId == productId)
             .toList() ??
         [];
-  }
-
-  /// Save restaurant's products to local database
-  static Future<void> saveRestaurantProducts(
-      List<RestaurantProduct> relations) async {
-    final Map<String, RestaurantProduct> entries = {
-      for (var relation in relations) relation.uniqueKey: relation
-    };
-    await _restaurantProductsBox?.putAll(entries);
   }
 
   // Favorites methods

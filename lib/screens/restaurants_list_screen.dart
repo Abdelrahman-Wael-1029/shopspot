@@ -40,7 +40,7 @@ class _RestaurantsListScreenState extends State<RestaurantsListScreen> {
     final connectivityService = context.read<ConnectivityService>();
 
     // If restaurants are already being loaded from splash screen, don't duplicate the effort
-    if (!restaurantCubit.hasBeenInitialized) {
+    if (restaurantCubit.state is RestaurantInitial) {
       // Initialize with context to use connectivity awareness
       await restaurantCubit.initialize(context);
 

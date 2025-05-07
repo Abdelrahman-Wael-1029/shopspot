@@ -4,6 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shopspot/cubit/location_cubit/location_cubit.dart';
 import 'package:shopspot/cubit/location_cubit/location_state.dart';
+import 'package:shopspot/cubit/restaurant_cubit/restaurant_cubit.dart';
 import 'package:shopspot/utils/app_routes.dart';
 import 'package:shopspot/utils/color_scheme_extension.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -138,10 +139,10 @@ class _RestaurantsMapScreenState extends State<RestaurantsMapScreen> {
                     ),
                     child: Text(
                       distanceText,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
-                        color: Colors.blue,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                   ),
@@ -197,6 +198,7 @@ class _RestaurantsMapScreenState extends State<RestaurantsMapScreen> {
   }
 
   Future<void> _refreshLocation() async {
+    final restaurantCubit = context.read<RestaurantCubit>();
     setState(() {
       _isRefreshing = true;
     });
@@ -220,11 +222,13 @@ class _RestaurantsMapScreenState extends State<RestaurantsMapScreen> {
 
       await locationCubit.refreshLocation();
 
-      // Re-create markers with updated distances
-      _createMarkers();
-
-      // Fit bounds to include new location
-      _fitBounds();
+      if (locationCubit.currentLocation != null) {
+        if (mounted) {
+          await restaurantCubit.refreshRestaurantsDistances(context);
+        }
+        _createMarkers();
+        _fitBounds(includeUserLocation: true);
+      }
 
       if (mounted) {
         Fluttertoast.showToast(
@@ -326,9 +330,9 @@ class _RestaurantsMapScreenState extends State<RestaurantsMapScreen> {
                       ),
                       width: 40,
                       height: 40,
-                      child: const Icon(
+                      child: Icon(
                         Icons.my_location,
-                        color: Colors.blue,
+                        color: Theme.of(context).colorScheme.primary,
                         size: 20,
                       ),
                     ),

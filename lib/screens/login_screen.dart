@@ -70,15 +70,12 @@ class _LoginScreenState extends State<LoginScreen> {
     if (success && mounted) {
       Fluttertoast.showToast(
         msg: "Login successful",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
         backgroundColor: Theme.of(context).colorScheme.success,
         textColor: Theme.of(context).colorScheme.onSuccess,
       );
-      Navigator.pushNamedAndRemoveUntil(
+      Navigator.pushReplacementNamed(
         context,
         AppRoutes.home,
-        (routes) => false,
       );
     } else if (mounted) {
       Fluttertoast.showToast(
@@ -193,10 +190,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         _passwordError = null;
                         _showPassword = false;
                       });
-                      Navigator.pushNamedAndRemoveUntil(
+                      Navigator.pushNamed(
                         context,
                         AppRoutes.register,
-                        (route) => false,
                       );
                     },
                     child: const Text('Sign Up'),

@@ -1,5 +1,3 @@
-
-// State classes
 abstract class IndexState {}
 
 class IndexInitial extends IndexState {}

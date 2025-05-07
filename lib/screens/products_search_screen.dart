@@ -3,12 +3,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shopspot/cubit/product_cubit/product_state.dart';
 import 'package:shopspot/services/connectivity_service/connectivity_service.dart';
 import 'package:shopspot/services/connectivity_service/connectivity_state.dart';
+import 'package:shopspot/services/database_service.dart';
 import 'package:shopspot/utils/app_routes.dart';
 import 'package:shopspot/utils/color_scheme_extension.dart';
 import 'package:shopspot/widgets/custom_search.dart';
 import 'package:shopspot/widgets/product_search_card.dart';
 import 'package:shopspot/cubit/product_cubit/product_cubit.dart';
-import 'package:shopspot/models/product_model.dart';
 
 class ProductsSearchScreen extends StatefulWidget {
   const ProductsSearchScreen({super.key});
@@ -37,7 +37,13 @@ class _ProductsSearchScreenState extends State<ProductsSearchScreen> {
 
   Future<void> _loadData() async {
     // Initialize cubits
-    context.read<ProductCubit>().fetchData(context);
+    final productCubit = context.read<ProductCubit>();
+    if (productCubit.state is ProductLoading) {
+      return; // Prevent multiple loading states
+    } else if (productCubit.state is ProductInitial ||
+        productCubit.state is ProductError) {
+      await productCubit.fetchData(context);
+    }
   }
 
   @override
@@ -169,10 +175,16 @@ class _ProductsSearchScreenState extends State<ProductsSearchScreen> {
                   padding: const EdgeInsets.all(16),
                   itemCount: products.length,
                   itemBuilder: (_, index) {
-                    Product product = products[index];
+                    final product = products[index];
+                    final relations =
+                        DatabaseService.getRelationsByProductId(product.id);
+                    final restaurants =
+                        DatabaseService.getRestaurantsByRelations(relations);
                     return ProductSearchCard(
                       key: Key('product_${product.id}'),
                       product: product,
+                      restaurants: restaurants,
+                      relations: relations,
                     );
                   },
                 );

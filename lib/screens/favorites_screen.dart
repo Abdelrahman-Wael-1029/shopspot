@@ -257,7 +257,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     final connectivityService = context.read<ConnectivityService>();
 
     // Only initialize if not already initialized
-    if (!favoriteCubit.hasBeenInitialized) {
+    if (favoriteCubit.state is FavoriteInitial ||
+        favoriteCubit.state is FavoriteError) {
       // Initialize with context to use connectivity awareness
       await favoriteCubit.initialize(context);
 
@@ -294,7 +295,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         ),
         const SizedBox(height: 24),
         ElevatedButton(
-          onPressed: () => context.read<IndexCubit>().changeIndex(0),
+          onPressed: () => context.read<IndexCubit>().setIndex(0),
           child: const Text('Browse Restaurants'),
         ),
       ],

@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:shopspot/cubit/restaurant_cubit/restaurant_state.dart';
 import 'package:shopspot/models/restaurant_model.dart';
 import 'package:shopspot/models/restaurant_product_model.dart';
 import 'package:shopspot/models/product_model.dart';
-import 'package:shopspot/cubit/restaurant_cubit/restaurant_cubit.dart';
-import 'package:shopspot/services/database_service.dart';
 import 'package:shopspot/utils/app_routes.dart';
 import 'package:shopspot/utils/color_scheme_extension.dart';
 
@@ -98,10 +94,14 @@ class ProductSearchCardSkeleton extends StatelessWidget {
 
 class ProductSearchCard extends StatefulWidget {
   final Product product;
+  final List<Restaurant> restaurants;
+  final List<RestaurantProduct> relations;
 
   const ProductSearchCard({
     super.key,
     required this.product,
+    required this.restaurants,
+    required this.relations,
   });
 
   @override
@@ -109,27 +109,18 @@ class ProductSearchCard extends StatefulWidget {
 }
 
 class _ProductSearchCardState extends State<ProductSearchCard> {
-  List<RestaurantProduct> _restaurantProducts = [];
-  List<Restaurant> _restaurants = [];
-
-  Future<void> _loadRestaurants() async {
-    // Fetch restaurants related to the product
-    _restaurants = await context
-        .read<RestaurantCubit>()
-        .getRestaurantsByProductId(context, widget.product.id);
-    _restaurantProducts =
-        DatabaseService.getRelationsByProductId(widget.product.id);
-
-    // Sort restaurants by status
+  @override
+  void initState() {
+    super.initState();
     _sortRestaurantsByStatus();
   }
 
   void _sortRestaurantsByStatus() {
-    if (_restaurants.isEmpty) return;
+    if (widget.restaurants.isEmpty) return;
 
-    _restaurants.sort((a, b) {
+    widget.restaurants.sort((a, b) {
       // Find restaurant products for these restaurants
-      final aRelation = _restaurantProducts.firstWhere(
+      final aRelation = widget.relations.firstWhere(
         (relation) => relation.restaurantId == a.id,
         orElse: () => RestaurantProduct(
           restaurantId: a.id,
@@ -140,7 +131,7 @@ class _ProductSearchCardState extends State<ProductSearchCard> {
         ),
       );
 
-      final bRelation = _restaurantProducts.firstWhere(
+      final bRelation = widget.relations.firstWhere(
         (relation) => relation.restaurantId == b.id,
         orElse: () => RestaurantProduct(
           restaurantId: b.id,
@@ -183,70 +174,41 @@ class _ProductSearchCardState extends State<ProductSearchCard> {
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       clipBehavior: Clip.antiAlias,
-      child: BlocBuilder<RestaurantCubit, RestaurantState>(
-        builder: (context, state) {
-          return ExpansionTile(
-            onExpansionChanged: (expanded) {
-              if (expanded) _loadRestaurants();
-            },
-            shape: const RoundedRectangleBorder(
-              side: BorderSide(color: Colors.transparent),
-            ),
-            collapsedShape: const RoundedRectangleBorder(
-              side: BorderSide(color: Colors.transparent),
-            ),
-            leading: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child:
-                  _buildImage(widget.product.imageUrl, 80, 56, Icons.fastfood),
-            ),
-            title: Text(
-              widget.product.name,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            subtitle: Text(
-              widget.product.description,
-              style: const TextStyle(
-                fontSize: 14,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            children: [
-              _buildRestaurantList(),
-            ],
-          );
-        },
+      child: ExpansionTile(
+        shape: const RoundedRectangleBorder(
+          side: BorderSide(color: Colors.transparent),
+        ),
+        collapsedShape: const RoundedRectangleBorder(
+          side: BorderSide(color: Colors.transparent),
+        ),
+        leading: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: _buildImage(widget.product.imageUrl, 80, 56, Icons.fastfood),
+        ),
+        title: Text(
+          widget.product.name,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        subtitle: Text(
+          widget.product.description,
+          style: const TextStyle(
+            fontSize: 14,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        children: [
+          _buildRestaurantList(),
+        ],
       ),
     );
   }
 
   Widget _buildRestaurantList() {
-    final restaurantCubit = context.read<RestaurantCubit>();
-    if (restaurantCubit.isLoadingProductRestaurants(widget.product.id)) {
-      return const Padding(
-        padding: EdgeInsets.all(16),
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-    if (restaurantCubit.productsError != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Text(
-            restaurantCubit.productsError!,
-            style: TextStyle(
-                color: restaurantCubit.productsError!.contains('server')
-                    ? Theme.of(context).colorScheme.warning
-                    : Theme.of(context).colorScheme.error),
-          ),
-        ),
-      );
-    }
-    if (_restaurants.isEmpty) {
+    if (widget.restaurants.isEmpty) {
       return const Padding(
         padding: EdgeInsets.all(16),
         child: Text('No restaurants found for this product'),
@@ -260,7 +222,7 @@ class _ProductSearchCardState extends State<ProductSearchCard> {
             children: [
               Expanded(
                 child: Text(
-                  'Available at ${_restaurants.length} ${_restaurants.length == 1 ? 'restaurant' : 'restaurants'}',
+                  'Available at ${widget.restaurants.length} ${widget.restaurants.length == 1 ? 'restaurant' : 'restaurants'}',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
@@ -277,7 +239,7 @@ class _ProductSearchCardState extends State<ProductSearchCard> {
                     context,
                     AppRoutes.restaurantsMap,
                     arguments: {
-                      'restaurants': _restaurants,
+                      'restaurants': widget.restaurants,
                       'productName': widget.product.name,
                     },
                   );
@@ -291,12 +253,12 @@ class _ProductSearchCardState extends State<ProductSearchCard> {
           child: ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: _restaurants.length,
+            itemCount: widget.restaurants.length,
             itemBuilder: (_, index) {
-              final restaurant = _restaurants[index];
+              final restaurant = widget.restaurants[index];
 
               // Find the relation for this restaurant-product pair
-              final relation = _restaurantProducts.firstWhere(
+              final relation = widget.relations.firstWhere(
                 (r) => r.restaurantId == restaurant.id,
                 orElse: () => RestaurantProduct(
                   restaurantId: restaurant.id,

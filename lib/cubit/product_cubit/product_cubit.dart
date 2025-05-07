@@ -1,34 +1,47 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shopspot/cubit/product_cubit/product_state.dart';
+import 'package:shopspot/cubit/restaurant_cubit/restaurant_cubit.dart';
+import 'package:shopspot/cubit/restaurant_cubit/restaurant_state.dart';
 import 'package:shopspot/models/restaurant_product_model.dart';
 import 'package:shopspot/models/product_model.dart';
 import 'package:shopspot/services/api_service.dart';
 import 'package:shopspot/services/database_service.dart';
 import 'package:shopspot/services/connectivity_service/connectivity_service.dart';
-import 'package:shopspot/utils/color_scheme_extension.dart';
 
 class ProductCubit extends Cubit<ProductState> {
-  List<Product> _allProducts = [];
+  List<Product> _products = [];
 
   ProductCubit() : super(ProductInitial());
 
-  List<Product> get allProducts => _allProducts;
+  List<Product> get products => _products;
 
   // Fetch products with context awareness
-  Future<List<Product>> fetchData(BuildContext context,
-      [int? restaurantId]) async {
+  Future<void> fetchData(BuildContext context) async {
+    final RestaurantCubit restaurantCubit = context.read<RestaurantCubit>();
     emit(ProductLoading());
 
+    if (restaurantCubit.state is RestaurantLoading) {
+      late StreamSubscription subscription;
+
+      subscription = restaurantCubit.stream.listen((restaurantState) {
+        if (restaurantState is RestaurantLoaded && state is ProductLoading &&context.mounted) {
+          _loadProducts(context);
+          subscription.cancel();
+        }
+      });
+    } else if (restaurantCubit.state is RestaurantLoaded) {
+      _loadProducts(context);
+    }
+  }
+
+  Future<void> _loadProducts(BuildContext context) async {
     // Extract connectivity service
     final connectivityService = context.read<ConnectivityService>();
 
     // Always check cached restaurants availability first
-    List<Product> cachedProducts = [];
-    if (restaurantId != null) {
-      cachedProducts = DatabaseService.getProductsByRestaurantId(restaurantId);
-    }
+    List<Product> cachedProducts = DatabaseService.getAllProducts();
     final hasCachedData = cachedProducts.isNotEmpty;
 
     // Always check server availability with a short timeout
@@ -40,50 +53,37 @@ class ProductCubit extends Cubit<ProductState> {
       if (serverIsAvailable) {
         // Reset server status since it's available
         connectivityService.resetServerStatus();
-        result = await ApiService.getProductsByRestaurantId(restaurantId);
+        result = await ApiService.getProducts();
 
         if (result['success']) {
           // Convert API response to Product objects
-          final List<dynamic> productsData = result['products'];
-          final List<Product> serverProducts = productsData
-              .map((productData) => Product.fromJson(productData))
-              .toList();
+          final List<Product> serverProducts = [];
+          final List<RestaurantProduct> relations = [];
 
-          if (restaurantId != null) {
-            final List<RestaurantProduct> relations = productsData
-                .map((productData) =>
-                    RestaurantProduct.fromJson(productData['pivot']))
-                .toList();
-            await DatabaseService.deleteRestaurantRelations(restaurantId);
-            await DatabaseService.saveRestaurantProducts(relations);
-          } else {
-            _allProducts = serverProducts;
+          for (var productData in List<dynamic>.from(result['products'])) {
+            // Add the product
+            serverProducts.add(Product.fromJson(productData));
+
+            // Process pivot relationships if they exist
+            for (var relationData in List<dynamic>.from(productData['pivot'])) {
+              relations.add(RestaurantProduct.fromJson(relationData));
+            }
           }
 
-          // Save to database and update state
+          await DatabaseService.saveRelations(relations);
           await DatabaseService.saveProducts(serverProducts);
-          emit(ProductLoaded());
 
           // Mark as refreshed if connectivity service is available
           connectivityService.markRefreshed();
-          return serverProducts;
+          _products = serverProducts;
+          emit(ProductLoaded());
         }
       }
     } finally {
       if (!serverIsAvailable || (serverIsAvailable && !result['success'])) {
-        if (restaurantId == null && _allProducts.isNotEmpty) {
+        if (hasCachedData) {
+          _products = cachedProducts;
           emit(ProductLoaded());
-        } else if (restaurantId != null && hasCachedData) {
-          emit(ProductLoaded());
-
-          // Show toast if connectivity service available
-          if (context.mounted) {
-            Fluttertoast.showToast(
-              msg: 'Unable to connect to the server. Using cached data.',
-              backgroundColor: Theme.of(context).colorScheme.warning,
-              textColor: Theme.of(context).colorScheme.onWarning,
-            );
-          }
         } else {
           emit(ProductError(connectivityService.isOnline
               ? 'Unable to connect to the server. Please check your connection.'
@@ -91,7 +91,6 @@ class ProductCubit extends Cubit<ProductState> {
         }
       }
     }
-    return cachedProducts;
   }
 
   // Search products by name
@@ -108,6 +107,9 @@ class ProductCubit extends Cubit<ProductState> {
 
   // Search all products by name
   List<Product> searchAllProducts(String query) {
-    return filterProducts(_allProducts, query);
+    return filterProducts(_products, query);
   }
+
+  // Widget refreshData(BuildContext context) {
+  // }
 }

@@ -101,9 +101,9 @@ class _RestaurantLocationWidgetState extends State<RestaurantLocationWidget> {
                                 ),
                                 width: 40,
                                 height: 40,
-                                child: const Icon(
+                                child: Icon(
                                   Icons.my_location,
-                                  color: Colors.blue,
+                                  color: Theme.of(context).colorScheme.primary,
                                   size: 20,
                                 ),
                               ),
@@ -133,18 +133,18 @@ class _RestaurantLocationWidgetState extends State<RestaurantLocationWidget> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.directions_walk,
-                                color: Colors.blue,
+                                color: Theme.of(context).colorScheme.primary,
                                 size: 16,
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 locationCubit.formatDistance(distance!),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.blue,
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                               ),
                             ],
