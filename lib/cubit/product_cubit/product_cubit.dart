@@ -81,7 +81,7 @@ class ProductCubit extends Cubit<ProductState> {
       return products;
     }
 
-    final searchTerm = query.toLowerCase();
+    final searchTerm = query.toLowerCase().trim();
     return products
         .where((product) => product.name.toLowerCase().contains(searchTerm))
         .toList();

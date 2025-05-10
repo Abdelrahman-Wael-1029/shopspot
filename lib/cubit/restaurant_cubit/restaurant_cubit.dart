@@ -110,7 +110,7 @@ class RestaurantCubit extends Cubit<RestaurantState> {
       return _restaurants;
     }
 
-    final searchTerm = query.toLowerCase();
+    final searchTerm = query.toLowerCase().trim();
     return _restaurants
         .where((restaurant) =>
             restaurant.name.toLowerCase().contains(searchTerm) ||

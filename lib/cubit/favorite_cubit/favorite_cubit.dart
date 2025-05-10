@@ -150,7 +150,7 @@ class FavoriteCubit extends Cubit<FavoriteState> {
       return _favorites;
     }
 
-    final searchTerm = query.toLowerCase();
+    final searchTerm = query.toLowerCase().trim();
     return _favorites
         .where((restaurant) =>
             restaurant.name.toLowerCase().contains(searchTerm) ||
