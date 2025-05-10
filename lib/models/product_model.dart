@@ -1,8 +1,8 @@
 import 'package:hive/hive.dart';
 
-part 'package:shopspot/models/product_model.g.dart'; 
+part 'package:shopspot/models/product_model.g.dart';
 
-@HiveType(typeId: 2) 
+@HiveType(typeId: 2)
 class Product extends HiveObject {
   @HiveField(0)
   final int id;

@@ -268,9 +268,7 @@ class _RestaurantLocationWidgetState extends State<RestaurantLocationWidget> {
       // Update the map view
       if (locationCubit.currentLocation != null) {
         _fitBothLocations(locationCubit);
-        if (mounted) {
-          await restaurantCubit.refreshRestaurantsDistances(context);
-        }
+        await restaurantCubit.refreshRestaurantsDistances(locationCubit);
         distance = locationCubit.getDistanceSync(widget.restaurant);
       }
 

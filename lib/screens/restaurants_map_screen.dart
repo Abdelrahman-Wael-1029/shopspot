@@ -207,8 +207,7 @@ class _RestaurantsMapScreenState extends State<RestaurantsMapScreen> {
       final locationCubit = context.read<LocationCubit>();
 
       // Check permission first
-      final hasPermission =
-          await locationCubit.checkLocationPermission();
+      final hasPermission = await locationCubit.checkLocationPermission();
       if (!hasPermission) {
         if (mounted) {
           Fluttertoast.showToast(
@@ -223,9 +222,7 @@ class _RestaurantsMapScreenState extends State<RestaurantsMapScreen> {
       await locationCubit.refreshLocation();
 
       if (locationCubit.currentLocation != null) {
-        if (mounted) {
-          await restaurantCubit.refreshRestaurantsDistances(context);
-        }
+        await restaurantCubit.refreshRestaurantsDistances(locationCubit);
         _createMarkers();
         _fitBounds(includeUserLocation: true);
       }
@@ -257,8 +254,10 @@ class _RestaurantsMapScreenState extends State<RestaurantsMapScreen> {
     return BlocConsumer<LocationCubit, LocationState>(
       listenWhen: (previous, current) {
         // Just check if the state indicates location was updated
-        return current is LocationLoaded && (previous is LocationLoading || 
-            previous is LocationError || previous is LocationInitial);
+        return current is LocationLoaded &&
+            (previous is LocationLoading ||
+                previous is LocationError ||
+                previous is LocationInitial);
       },
       listener: (context, state) {
         // Location has changed, update the map

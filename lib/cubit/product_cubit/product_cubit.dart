@@ -2,8 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shopspot/cubit/product_cubit/product_state.dart';
-import 'package:shopspot/cubit/restaurant_cubit/restaurant_cubit.dart';
-import 'package:shopspot/cubit/restaurant_cubit/restaurant_state.dart';
 import 'package:shopspot/models/restaurant_product_model.dart';
 import 'package:shopspot/models/product_model.dart';
 import 'package:shopspot/services/api_service.dart';
@@ -19,28 +17,9 @@ class ProductCubit extends Cubit<ProductState> {
 
   // Fetch products with context awareness
   Future<void> fetchData(BuildContext context) async {
-    final restaurantCubit = context.read<RestaurantCubit>();
-    final connectivityService = context.read<ConnectivityService>();
     emit(ProductLoading());
+    final connectivityService = context.read<ConnectivityService>();
 
-    if (restaurantCubit.state is RestaurantLoading ||
-        restaurantCubit.state is RestaurantInitial) {
-      late StreamSubscription subscription;
-
-      subscription = restaurantCubit.stream.listen((restaurantState) {
-        if ((restaurantState is RestaurantLoaded ||
-                restaurantState is RestaurantError) &&
-            state is ProductLoading) {
-          _loadProducts(connectivityService);
-          subscription.cancel();
-        }
-      });
-    } else if (restaurantCubit.state is RestaurantLoaded) {
-      _loadProducts(connectivityService);
-    }
-  }
-
-  Future<void> _loadProducts(ConnectivityService connectivityService) async {
     // Always check cached restaurants availability first
     List<Product> cachedProducts = DatabaseService.getAllProducts();
     final hasCachedData = cachedProducts.isNotEmpty;
@@ -66,11 +45,13 @@ class ProductCubit extends Cubit<ProductState> {
             serverProducts.add(Product.fromJson(productData));
 
             // Process pivot relationships if they exist
-            for (var relationData in List<dynamic>.from(productData['pivot'])) {
+            for (var relationData in List<dynamic>.from(productData['pivots'])) {
               relations.add(RestaurantProduct.fromJson(relationData));
             }
           }
 
+          // Clear the database and save new data
+          await DatabaseService.deleteProductsWithRelations();
           await DatabaseService.saveRelations(relations);
           await DatabaseService.saveProducts(serverProducts);
 
@@ -110,7 +91,4 @@ class ProductCubit extends Cubit<ProductState> {
   List<Product> searchAllProducts(String query) {
     return filterProducts(_products, query);
   }
-
-  // Widget refreshData(BuildContext context) {
-  // }
 }

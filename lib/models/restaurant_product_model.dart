@@ -29,7 +29,7 @@ class RestaurantProduct extends HiveObject {
 
   // Generate a unique key for this relationship
   String get uniqueKey => '$restaurantId:$productId';
-  
+
   factory RestaurantProduct.fromJson(Map<String, dynamic> json) {
     return RestaurantProduct(
       restaurantId: json['restaurant_id'],

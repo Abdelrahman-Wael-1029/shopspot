@@ -41,21 +41,15 @@ class DatabaseService {
   /// Save current user to local database
   static Future<void> saveCurrentUser(User user) async {
     // Save profile image locally if it has a URL
-    User userToSave = user;
     if (user.profilePhotoUrl != null && user.profilePhotoUrl!.isNotEmpty) {
       final localImagePath =
           await _saveProfileImageLocally(user.profilePhotoUrl!);
       if (localImagePath != null) {
-        userToSave = user.copyWith(profilePhoto: localImagePath);
+        user = user.copyWith(profilePhoto: localImagePath);
       }
     }
 
-    // Save user with current timestamp
-    final userWithTimestamp = userToSave.copyWith(
-      lastSyncTime: DateTime.now(),
-    );
-
-    await _userBox?.put(_currentUserKey, userWithTimestamp);
+    await _userBox?.put(_currentUserKey, user);
   }
 
   /// Get current user from local database
@@ -136,23 +130,10 @@ class DatabaseService {
     }
   }
 
-  /// Delete all relations with a restaurant
-  static Future<void> deleteRestaurantRelations(int restaurantId) async {
-    // Delete all relations with the restaurant
-    final relations = getRelationsByRestaurantId(restaurantId);
-    for (var relation in relations) {
-      await _restaurantProductsBox?.delete(relation.uniqueKey);
-    }
-  }
-
-  /// Delete all restaurants and products from local database
-  static Future<void> clearDatabase() async {
+  /// Delete all restaurants
+  static Future<void> deleteRestaurants() async {
     // Delete all restaurants
     await _restaurantsBox?.clear();
-    // Delete all restaurant products
-    await _restaurantProductsBox?.clear();
-    // Delete all products
-    await _productsBox?.clear();
   }
 
   /// Get all restaurants from local database
@@ -184,6 +165,13 @@ class DatabaseService {
     }
   }
 
+  /// Delete all products with relations
+  static Future<void> deleteProductsWithRelations() async {
+    // Delete all products
+    await _productsBox?.clear();
+    await _restaurantProductsBox?.clear();
+  }
+
   /// Get all products from local database
   static List<Product> getAllProducts() {
     return _productsBox?.values.toList() ?? [];
@@ -203,12 +191,10 @@ class DatabaseService {
         .toList();
   }
 
-
   // Relation methods
 
   /// Save restaurant's products to local database
-  static Future<void> saveRelations(
-      List<RestaurantProduct> relations) async {
+  static Future<void> saveRelations(List<RestaurantProduct> relations) async {
     final Map<String, RestaurantProduct> entries = {
       for (var relation in relations) relation.uniqueKey: relation
     };

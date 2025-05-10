@@ -82,7 +82,7 @@ class LocationCubit extends Cubit<LocationState> {
   }
 
   // Get distance from server (more accurate with road and terrain)
-  Future<double?> getDistance(Restaurant restaurant) async {
+  Future<void> getDistance(Restaurant restaurant) async {
     emit(LocationLoading());
 
     try {
@@ -93,14 +93,13 @@ class LocationCubit extends Cubit<LocationState> {
 
     if (_currentLocation == null) {
       emit(LocationError("Failed to get location"));
-      return null; // Failed to get location
+      return; // Failed to get location
     }
 
     // Calculate distance locally
     final distance = calculateDistance(restaurant);
     _restaurantDistances[restaurant.id] = distance;
     emit(LocationLoaded());
-    return distance;
   }
 
   // Format distance for display

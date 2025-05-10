@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shopspot/cubit/product_cubit/product_state.dart';
 import 'package:shopspot/services/connectivity_service/connectivity_service.dart';
 import 'package:shopspot/services/connectivity_service/connectivity_state.dart';
-import 'package:shopspot/services/database_service.dart';
 import 'package:shopspot/utils/app_routes.dart';
 import 'package:shopspot/utils/color_scheme_extension.dart';
 import 'package:shopspot/widgets/custom_search.dart';
@@ -176,15 +175,9 @@ class _ProductsSearchScreenState extends State<ProductsSearchScreen> {
                   itemCount: products.length,
                   itemBuilder: (_, index) {
                     final product = products[index];
-                    final relations =
-                        DatabaseService.getRelationsByProductId(product.id);
-                    final restaurants =
-                        DatabaseService.getRestaurantsByRelations(relations);
                     return ProductSearchCard(
                       key: Key('product_${product.id}'),
                       product: product,
-                      restaurants: restaurants,
-                      relations: relations,
                     );
                   },
                 );

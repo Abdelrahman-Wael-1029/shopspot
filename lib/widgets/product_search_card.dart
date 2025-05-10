@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:shopspot/cubit/restaurant_cubit/restaurant_cubit.dart';
+import 'package:shopspot/cubit/restaurant_cubit/restaurant_state.dart';
 import 'package:shopspot/models/restaurant_model.dart';
 import 'package:shopspot/models/restaurant_product_model.dart';
 import 'package:shopspot/models/product_model.dart';
+import 'package:shopspot/services/database_service.dart';
 import 'package:shopspot/utils/app_routes.dart';
 import 'package:shopspot/utils/color_scheme_extension.dart';
 
@@ -94,14 +98,10 @@ class ProductSearchCardSkeleton extends StatelessWidget {
 
 class ProductSearchCard extends StatefulWidget {
   final Product product;
-  final List<Restaurant> restaurants;
-  final List<RestaurantProduct> relations;
 
   const ProductSearchCard({
     super.key,
     required this.product,
-    required this.restaurants,
-    required this.relations,
   });
 
   @override
@@ -109,18 +109,22 @@ class ProductSearchCard extends StatefulWidget {
 }
 
 class _ProductSearchCardState extends State<ProductSearchCard> {
-  @override
-  void initState() {
-    super.initState();
+  List<Restaurant> restaurants = [];
+  List<RestaurantProduct> relations = [];
+
+  void _loadRelations() {
+    if (restaurants.isNotEmpty) return;
+    relations = DatabaseService.getRelationsByProductId(widget.product.id);
+    restaurants = DatabaseService.getRestaurantsByRelations(relations);
     _sortRestaurantsByStatus();
   }
 
   void _sortRestaurantsByStatus() {
-    if (widget.restaurants.isEmpty) return;
+    if (restaurants.isEmpty) return;
 
-    widget.restaurants.sort((a, b) {
+    restaurants.sort((a, b) {
       // Find restaurant products for these restaurants
-      final aRelation = widget.relations.firstWhere(
+      final aRelation = relations.firstWhere(
         (relation) => relation.restaurantId == a.id,
         orElse: () => RestaurantProduct(
           restaurantId: a.id,
@@ -131,7 +135,7 @@ class _ProductSearchCardState extends State<ProductSearchCard> {
         ),
       );
 
-      final bRelation = widget.relations.firstWhere(
+      final bRelation = relations.firstWhere(
         (relation) => relation.restaurantId == b.id,
         orElse: () => RestaurantProduct(
           restaurantId: b.id,
@@ -208,182 +212,193 @@ class _ProductSearchCardState extends State<ProductSearchCard> {
   }
 
   Widget _buildRestaurantList() {
-    if (widget.restaurants.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(16),
-        child: Text('No restaurants found for this product'),
-      );
-    }
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Available at ${widget.restaurants.length} ${widget.restaurants.length == 1 ? 'restaurant' : 'restaurants'}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.map),
-                label: const Text('Show on Map'),
-                style: ElevatedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+    return BlocBuilder<RestaurantCubit, RestaurantState>(
+      builder: (context, state) {
+        if (state is RestaurantLoading) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        }
+        _loadRelations();
+        if (restaurants.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text('No restaurants found for this product'),
+          );
+        }
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Available at ${restaurants.length} ${restaurants.length == 1 ? 'restaurant' : 'restaurants'}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
-                ),
-                onPressed: () {
-                  Navigator.pushNamed(
-                    context,
-                    AppRoutes.restaurantsMap,
-                    arguments: {
-                      'restaurants': widget.restaurants,
-                      'productName': widget.product.name,
-                    },
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: widget.restaurants.length,
-            itemBuilder: (_, index) {
-              final restaurant = widget.restaurants[index];
-
-              // Find the relation for this restaurant-product pair
-              final relation = widget.relations.firstWhere(
-                (r) => r.restaurantId == restaurant.id,
-                orElse: () => RestaurantProduct(
-                  restaurantId: restaurant.id,
-                  productId: widget.product.id,
-                  price: 0,
-                  status: 'Unknown',
-                  rating: 0,
-                ),
-              );
-
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Card(
-                  clipBehavior: Clip.antiAlias,
-                  elevation: 1,
-                  child: InkWell(
-                    onTap: () {
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.map),
+                    label: const Text('Show on Map'),
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    onPressed: () {
                       Navigator.pushNamed(
                         context,
-                        AppRoutes.restaurantDetails,
+                        AppRoutes.restaurantsMap,
                         arguments: {
-                          'restaurant': restaurant,
+                          'restaurants': restaurants,
+                          'productName': widget.product.name,
                         },
                       );
                     },
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Restaurant image
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: _buildImage(
-                                restaurant.imageUrl, 70, 70, Icons.restaurant),
-                          ),
-                          const SizedBox(width: 12),
-                          // Restaurant details
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: restaurants.length,
+                itemBuilder: (_, index) {
+                  final restaurant = restaurants[index];
+
+                  // Find the relation for this restaurant-product pair
+                  final relation = relations.firstWhere(
+                    (r) => r.restaurantId == restaurant.id,
+                    orElse: () => RestaurantProduct(
+                      restaurantId: restaurant.id,
+                      productId: widget.product.id,
+                      price: 0,
+                      status: 'Unknown',
+                      rating: 0,
+                    ),
+                  );
+
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Card(
+                      clipBehavior: Clip.antiAlias,
+                      elevation: 1,
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.pushNamed(
+                            context,
+                            AppRoutes.restaurantDetails,
+                            arguments: {
+                              'restaurant': restaurant,
+                            },
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Restaurant image
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: _buildImage(restaurant.imageUrl, 70, 70,
+                                    Icons.restaurant),
+                              ),
+                              const SizedBox(width: 12),
+                              // Restaurant details
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Expanded(
-                                      child: Text(
-                                        restaurant.name,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            restaurant.name,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                        // Price
+                                        Text(
+                                          '\$${relation.price}',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                            color: Colors.blue,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    // Status badge
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: _getStatusColor(relation.status),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        relation.status.replaceAll('_', ' '),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
-                                    // Price
-                                    Text(
-                                      '\$${relation.price}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                        color: Colors.blue,
-                                      ),
+                                    const SizedBox(height: 8),
+                                    // Rating
+                                    Row(
+                                      children: [
+                                        RatingBarIndicator(
+                                          rating: relation.rating,
+                                          itemBuilder: (context, _) =>
+                                              const Icon(
+                                            Icons.star,
+                                            color: Colors.amber,
+                                          ),
+                                          itemCount: 5,
+                                          itemSize: 16.0,
+                                          direction: Axis.horizontal,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          relation.rating.toStringAsFixed(1),
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 4),
-                                // Status badge
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: _getStatusColor(relation.status),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    relation.status.replaceAll('_', ' '),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                // Rating
-                                Row(
-                                  children: [
-                                    RatingBarIndicator(
-                                      rating: relation.rating,
-                                      itemBuilder: (context, _) => const Icon(
-                                        Icons.star,
-                                        color: Colors.amber,
-                                      ),
-                                      itemCount: 5,
-                                      itemSize: 16.0,
-                                      direction: Axis.horizontal,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      relation.rating.toStringAsFixed(1),
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 

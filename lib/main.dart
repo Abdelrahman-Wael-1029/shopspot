@@ -160,11 +160,9 @@ class _AppLifecycleManagerState extends State<AppLifecycleManager>
     super.didChangeDependencies();
     // Initialize cubits once when dependencies are available
     if (!_cubitsInitialized) {
-      _connectivityService =
-          context.read<ConnectivityService>();
+      _connectivityService = context.read<ConnectivityService>();
       _authCubit = context.read<AuthCubit>();
-      _restaurantCubit =
-          context.read<RestaurantCubit>();
+      _restaurantCubit = context.read<RestaurantCubit>();
       _cubitsInitialized = true;
     }
   }

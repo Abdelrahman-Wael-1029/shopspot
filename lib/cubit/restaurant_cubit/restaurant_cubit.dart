@@ -21,13 +21,14 @@ class RestaurantCubit extends Cubit<RestaurantState> {
   String? get productsError => _productsError;
 
   Future<void> initialize(BuildContext context) async {
-    await fetchData(context);
+    fetchData(context);
   }
 
   Future<void> fetchData(BuildContext context) async {
     emit(RestaurantLoading());
 
     final connectivityService = context.read<ConnectivityService>();
+    final locationCubit = context.read<LocationCubit>();
 
     final cachedRestaurants = DatabaseService.getAllRestaurants();
     final hasCachedData = cachedRestaurants.isNotEmpty;
@@ -46,7 +47,7 @@ class RestaurantCubit extends Cubit<RestaurantState> {
               .map((restaurantData) => Restaurant.fromJson(restaurantData))
               .toList();
 
-          await DatabaseService.clearDatabase();
+          await DatabaseService.deleteRestaurants();
           await DatabaseService.saveRestaurants(serverRestaurants);
           _restaurants = serverRestaurants;
 
@@ -73,19 +74,18 @@ class RestaurantCubit extends Cubit<RestaurantState> {
               : 'You are offline. Please check your connection.'));
         }
       }
-      if (context.mounted) refreshRestaurantsDistances(context);
+      refreshRestaurantsDistances(locationCubit);
     }
   }
 
   Future<void> refreshRestaurants(BuildContext context) async {
-    await context.read<ProductCubit>().fetchData(context);
-    if (context.mounted) await fetchData(context);
+    context.read<ProductCubit>().fetchData(context);
+    if (context.mounted) fetchData(context);
   }
 
-  Future<void> refreshRestaurantsDistances(BuildContext context) async {
-    final locationCubit = context.read<LocationCubit>();
+  Future<void> refreshRestaurantsDistances(LocationCubit locationCubit) async {
     for (var restaurant in _restaurants) {
-      await locationCubit.getDistance(restaurant);
+      locationCubit.getDistance(restaurant);
     }
   }
 
@@ -94,7 +94,7 @@ class RestaurantCubit extends Cubit<RestaurantState> {
 
     // Only try to refresh from server if we're online
     if (connectivityService.isOnline) {
-      await refreshRestaurants(context);
+      refreshRestaurants(context);
     } else {
       // Show toast or alert that we're offline
       Fluttertoast.showToast(
