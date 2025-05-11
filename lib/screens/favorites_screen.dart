@@ -246,9 +246,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   // Track the dismiss state of a particular card
   void _onDismissStatusChanged(int restaurantId, bool isLoading) {
-    setState(() {
-      _isDismissing = isLoading;
-    });
+    if (context.mounted) {
+      setState(() {
+        _isDismissing = isLoading;
+      });
+    }
   }
 
   Future<void> _loadFavorites() async {
