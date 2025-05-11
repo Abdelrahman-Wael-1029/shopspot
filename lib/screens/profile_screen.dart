@@ -243,12 +243,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _confirmPasswordController.clear();
       });
     } else if (mounted) {
-      setState(() {
-        _isEditing = false;
-      });
       Fluttertoast.showToast(
         msg: authCubit.state is AuthError
-            ? (authCubit.state as AuthError).message
+            ? (authCubit.state as AuthError).message  
             : "Something went wrong. Please try again.",
         backgroundColor: Theme.of(context).colorScheme.warning,
         textColor: Theme.of(context).colorScheme.onWarning,
@@ -298,7 +295,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authCubit = context.read<AuthCubit>();
+    final authCubit = context.watch<AuthCubit>();
     final user = authCubit.user;
 
     if (user == null) {
