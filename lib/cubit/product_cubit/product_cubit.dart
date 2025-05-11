@@ -45,7 +45,8 @@ class ProductCubit extends Cubit<ProductState> {
             serverProducts.add(Product.fromJson(productData));
 
             // Process pivot relationships if they exist
-            for (var relationData in List<dynamic>.from(productData['pivots'])) {
+            for (var relationData
+                in List<dynamic>.from(productData['pivots'])) {
               relations.add(RestaurantProduct.fromJson(relationData));
             }
           }

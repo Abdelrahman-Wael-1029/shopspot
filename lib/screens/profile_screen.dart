@@ -245,7 +245,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } else if (mounted) {
       Fluttertoast.showToast(
         msg: authCubit.state is AuthError
-            ? (authCubit.state as AuthError).message  
+            ? (authCubit.state as AuthError).message
             : "Something went wrong. Please try again.",
         backgroundColor: Theme.of(context).colorScheme.warning,
         textColor: Theme.of(context).colorScheme.onWarning,

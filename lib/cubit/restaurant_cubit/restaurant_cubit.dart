@@ -119,15 +119,11 @@ class RestaurantCubit extends Cubit<RestaurantState> {
   }
 
   Future<void> updateFavoriteStatus(int restaurantId, bool isFavorite) async {
-    await DatabaseService.changeFavoriteState(restaurantId, isFavorite);
-
     final restaurantIndex =
         _restaurants.indexWhere((restaurant) => restaurant.id == restaurantId);
 
     if (restaurantIndex != -1) {
       _restaurants[restaurantIndex].isFavorite = isFavorite;
     }
-
-    emit(RestaurantLoaded());
   }
 }

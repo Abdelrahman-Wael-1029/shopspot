@@ -191,6 +191,7 @@ class _RestaurantDetailsScreenState extends State<RestaurantDetailsScreen> {
         restaurantCubit.updateFavoriteStatus(
             widget.restaurant.id, !isFavorite // Toggle the current state
             );
+        widget.restaurant.isFavorite = !isFavorite;
       } else if (mounted) {
         // Show toast message that there was a problem connecting to the server
         Fluttertoast.showToast(
@@ -209,12 +210,10 @@ class _RestaurantDetailsScreenState extends State<RestaurantDetailsScreen> {
         );
       }
     } finally {
-      // Always reset loading state if mounted
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      // Always reset loading state
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 

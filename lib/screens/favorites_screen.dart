@@ -189,7 +189,8 @@ class _DismissibleRestaurantCardState extends State<DismissibleRestaurantCard> {
             }
           },
           child: RestaurantCard(
-            key: ValueKey('restaurant_${widget.restaurant.id}'),
+            key: ValueKey(
+                'restaurant_${widget.restaurant.id}_${widget.restaurant.isFavorite}'),
             restaurant: widget.restaurant,
           ),
         ),
@@ -246,11 +247,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   // Track the dismiss state of a particular card
   void _onDismissStatusChanged(int restaurantId, bool isLoading) {
-    if (context.mounted) {
-      setState(() {
-        _isDismissing = isLoading;
-      });
-    }
+    if (!context.mounted) return;
+    setState(() {
+      _isDismissing = isLoading;
+    });
   }
 
   Future<void> _loadFavorites() async {
