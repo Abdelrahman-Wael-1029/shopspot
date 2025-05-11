@@ -243,6 +243,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _confirmPasswordController.clear();
       });
     } else if (mounted) {
+      setState(() {
+        _isEditing = false;
+      });
       Fluttertoast.showToast(
         msg: authCubit.state is AuthError
             ? (authCubit.state as AuthError).message
