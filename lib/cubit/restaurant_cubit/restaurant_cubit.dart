@@ -85,7 +85,7 @@ class RestaurantCubit extends Cubit<RestaurantState> {
 
   Future<void> refreshRestaurantsDistances(LocationCubit locationCubit) async {
     for (var restaurant in _restaurants) {
-      locationCubit.getDistance(restaurant);
+     await locationCubit.getDistance(restaurant);
     }
   }
 
