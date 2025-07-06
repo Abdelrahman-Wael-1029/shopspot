@@ -3,9 +3,53 @@
 ![Flutter](https://img.shields.io/badge/Flutter-3.5.4-02569B?style=flat&logo=flutter&logoColor=white)
 ![Dart](https://img.shields.io/badge/Dart-3.5.4-0175C2?style=flat&logo=dart&logoColor=white)
 ![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS-lightgrey)
-![License](https://img.shields.io/badge/License-Private-red)
 
 **ShopSpot** is a comprehensive Flutter application that serves as your personal shopping companion. Find nearby stores, explore detailed information, track distances using real-time location services, and curate your favorite shopping destinations all in one intuitive platform.
+
+## 📋 Table of Contents
+
+- [🎯 App Overview](#-app-overview)
+- [✨ Flutter-Specific Features](#-flutter-specific-features)
+  - [Core Functionality](#core-functionality)
+  - [Platform-Specific Features](#platform-specific-features)
+  - [State Management](#state-management)
+- [🛠️ Tech Stack & Dependencies](#️-tech-stack--dependencies)
+  - [Flutter SDK](#flutter-sdk)
+  - [Core Dependencies](#core-dependencies)
+  - [Development Dependencies](#development-dependencies)
+- [🏗️ App Architecture](#️-app-architecture)
+  - [Project Structure](#project-structure)
+  - [State Management Pattern](#state-management-pattern)
+  - [Database Architecture](#database-architecture)
+- [📋 Prerequisites & Installation](#-prerequisites--installation)
+  - [System Requirements](#system-requirements)
+  - [Platform-Specific Setup](#platform-specific-setup)
+- [🚀 Getting Started](#-getting-started)
+- [⚙️ Configuration Setup](#️-configuration-setup)
+  - [API Configuration](#api-configuration)
+  - [Location Services](#location-services)
+  - [Database Configuration](#database-configuration)
+- [📱 App Screens & Navigation](#-app-screens--navigation)
+  - [Main Navigation Flow](#main-navigation-flow)
+  - [Navigation Implementation](#navigation-implementation)
+- [🎛️ State Management](#️-state-management)
+  - [BLoC/Cubit Architecture](#bloccubit-architecture)
+  - [Global State Providers](#global-state-providers)
+- [🌐 Backend Integration](#-backend-integration)
+  - [API Service Architecture](#api-service-architecture)
+  - [Data Synchronization](#data-synchronization)
+  - [Authentication](#authentication)
+- [🧪 Testing](#-testing)
+  - [Test Configuration](#test-configuration)
+  - [Running Tests](#running-tests)
+- [🚀 Building & Deployment](#-building--deployment)
+  - [Development Build](#development-build)
+  - [Release Build](#release-build)
+  - [Build Configuration](#build-configuration)
+- [📊 App Features Summary](#-app-features-summary)
+- [🔧 Development](#-development)
+  - [Code Generation](#code-generation)
+  - [Debugging](#debugging)
 
 ## 🎯 App Overview
 
@@ -409,10 +453,6 @@ flutter packages pub run build_runner watch
 - Use Flutter DevTools for performance analysis
 - BLoC state inspection with flutter_bloc
 - Network debugging through API service logs
-
-## 📄 License
-
-This project is private and not licensed for public use.
 
 ---
 
