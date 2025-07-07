@@ -10,6 +10,7 @@
 ## 📋 Table of Contents
 
 - [🎯 App Overview](#-app-overview)
+- [🎥 Demo](#-demo)
 - [✨ Flutter-Specific Features](#-flutter-specific-features)
   - [Core Functionality](#core-functionality)
   - [Platform-Specific Features](#platform-specific-features)
@@ -66,6 +67,10 @@ ShopSpot solves the common problem of discovering and managing shopping location
 - **Offline Support**: Access cached data even when offline
 
 **Target Audience**: Local shoppers, food enthusiasts, travelers exploring new areas, and anyone looking to discover and organize their favorite shopping spots.
+
+## 🎥 Demo
+
+![ShopSpot Demo]()
 
 ## ✨ Flutter-Specific Features
 
@@ -230,7 +235,7 @@ class RestaurantCubit extends Cubit<RestaurantState> {
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/shopspot.git
+git clone https://github.com/Abdelrahman-Wael-1029/shopspot.git
 cd shopspot
 ```
 
@@ -359,6 +364,8 @@ MultiBlocProvider(
 ```
 
 ## 🌐 Backend Integration
+
+**Backend Repository**: [ShopSpot Restaurant API](https://github.com/Abdelrahman-Wael-1029/restaurant_api.git)
 
 ### API Service Architecture
 - **RESTful API**: HTTP-based communication with backend server
