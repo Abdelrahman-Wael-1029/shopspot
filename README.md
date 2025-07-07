@@ -70,7 +70,9 @@ ShopSpot solves the common problem of discovering and managing shopping location
 
 ## 🎥 Demo
 
-![ShopSpot Demo]()
+<p align="center">
+  <video src="" alt="Demo Video" style="border-radius: 15px; max-width: 80%;" />
+</p>
 
 ## ✨ Flutter-Specific Features
 
