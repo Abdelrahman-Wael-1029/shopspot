@@ -50,16 +50,22 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MediaQuery(
-      data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-      child: MaterialApp(
-        title: 'ShopSpot',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.system,
-        onGenerateRoute: AppRoutes.generateRoute,
-      ),
+    return MaterialApp(
+      title: 'ShopSpot',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.system,
+      onGenerateRoute: AppRoutes.generateRoute,
+      builder: (context, child) {
+        // Apply text scaling in builder to avoid lifecycle issues
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(1.0),
+          ),
+          child: child!,
+        );
+      },
     );
   }
 }
